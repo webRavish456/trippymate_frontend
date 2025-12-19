@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { io } from 'socket.io-client';
 import { API_BASE_URL } from '@/lib/config';
 
-export default function CommunityTripDetailPage() {
+function CommunityTripDetailPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1609,6 +1609,18 @@ export default function CommunityTripDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CommunityTripDetailPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Loading...</div>
+      </div>
+    }>
+      <CommunityTripDetailPageContent />
+    </Suspense>
   );
 }
 

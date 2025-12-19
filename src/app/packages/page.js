@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Grid, useMediaQuery } from "@mui/material";
 
 import { API_BASE_URL } from '@/lib/config';
 
-export default function PackagesPage() {
+function PackagesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const destinationId = searchParams.get('destination');
@@ -1573,5 +1573,17 @@ export default function PackagesPage() {
       )}
       </section>
     </div>
+  );
+}
+
+export default function PackagesPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Loading...</div>
+      </div>
+    }>
+      <PackagesPageContent />
+    </Suspense>
   );
 }

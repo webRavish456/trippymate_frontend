@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Grid } from "@mui/material";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -11,7 +11,7 @@ import 'swiper/css/navigation';
 
 import { API_BASE_URL } from '@/lib/config';
 
-export default function BlogPage() {
+function BlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const category = searchParams.get('category') || 'all';
@@ -1119,6 +1119,18 @@ export default function BlogPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div>Loading...</div>
+      </div>
+    }>
+      <BlogPageContent />
+    </Suspense>
   );
 }
 

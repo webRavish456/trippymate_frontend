@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import { setUser } from '@/store/actions/userActions';
 
 import { API_BASE_URL } from '@/lib/config';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const dispatch = useDispatch();
   const searchParams = useSearchParams();
@@ -318,5 +318,24 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="login-page">
+        <div className="login-container">
+          <div className="login-card">
+            <div className="login-header">
+              <h1 className="login-title">Sign In</h1>
+            </div>
+            <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
