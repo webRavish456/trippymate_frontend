@@ -14,6 +14,99 @@ import 'swiper/css/navigation';
 // API Base URL
 import { API_BASE_URL } from '@/lib/config';
 
+// Constants
+const DEFAULT_REVIEWS = [
+  {
+    userName: 'Priya Sharma',
+    rating: 5,
+    comment: 'Amazing experience! The place was beautiful and the trip was well organized. Highly recommend this destination for a peaceful getaway.',
+    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    userName: 'Rahul Kumar',
+    rating: 4,
+    comment: 'Great destination with stunning views. The accommodations were comfortable and the local food was delicious. Would visit again!',
+    date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    userName: 'Anjali Patel',
+    rating: 5,
+    comment: 'Perfect for solo travelers! Felt safe throughout the trip. The guides were knowledgeable and friendly. Made some great memories here.',
+    date: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    userName: 'Vikram Singh',
+    rating: 4,
+    comment: 'Beautiful location with rich culture. The activities were engaging and the overall experience was memorable. Worth every penny!',
+    date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  }
+];
+
+// Helper Functions
+const isCompositeId = (id) => {
+  const idParts = String(id).split('-');
+  return idParts.length >= 2 && idParts[0].length === 24; // MongoDB ObjectId is 24 chars
+};
+
+const parseCompositeId = (id) => {
+  const idParts = String(id).split('-');
+  const parentId = idParts[0];
+  const lastPart = idParts[idParts.length - 1];
+  const isLastPartIndex = /^\d+$/.test(lastPart);
+  const placeNameRaw = isLastPartIndex 
+    ? idParts.slice(1, -1).join('-')
+    : idParts.slice(1).join('-');
+  const placeName = decodeURIComponent(placeNameRaw);
+  return { parentId, placeName };
+};
+
+const findPlaceInDetails = (placesDetails, placeName) => {
+  if (!Array.isArray(placesDetails)) return null;
+  
+  const searchName = placeName.trim().toLowerCase();
+  return placesDetails.find(p => {
+    if (!p?.placeName) return false;
+    const pName = p.placeName.trim().toLowerCase();
+    
+    // Exact match
+    if (pName === searchName) return true;
+    
+    // Normalized match (handle spaces and hyphens)
+    const normalizedPName = pName.replace(/[-\s]+/g, ' ').trim();
+    const normalizedSearchName = searchName.replace(/[-\s]+/g, ' ').trim();
+    return normalizedPName === normalizedSearchName;
+  });
+};
+
+const transformPlaceToDestination = (place, parent, destinationId) => ({
+  _id: place._id || destinationId,
+  id: place._id || destinationId,
+  name: place.placeName,
+  location: place.location || `${place.placeName}, ${parent.state || parent.region || ''}`,
+  description: place.description || '',
+  images: place.images || (place.image ? [place.image] : []),
+  image: place.images?.[0] || place.image || '/explore-destination/default.png',
+  rating: place.rating || 4.5,
+  weatherInfo: place.weatherInfo || '',
+  bestTimeToVisit: place.bestTimeToVisit || '',
+  topAttractions: place.topAttractions || [],
+  activities: place.activities || [],
+  foodAndCuisine: place.food || [],
+  hotels: place.hotels || [],
+  eventsFestivals: place.eventsFestivals || [],
+  nearbyDestinations: place.nearbyDestinations || [],
+  reviews: DEFAULT_REVIEWS,
+  isWishlisted: false,
+  shareCount: 0
+});
+
+const addDefaultReviews = (destination) => {
+  if (!destination.reviews || destination.reviews.length === 0) {
+    destination.reviews = DEFAULT_REVIEWS;
+  }
+  return destination;
+};
+
 export default function DestinationDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -41,40 +134,38 @@ export default function DestinationDetailsPage() {
       
       setLoading(true);
       try {
+        // Handle composite ID (from placesDetails)
+        if (isCompositeId(destinationId)) {
+          const { parentId, placeName } = parseCompositeId(destinationId);
+          
+          try {
+            const parentRes = await fetch(`${API_BASE_URL}/api/admin/destination/${parentId}`);
+            const parentDataRes = await parentRes.json();
+            
+            if (parentDataRes.status && parentDataRes.data?.placesDetails) {
+              const place = findPlaceInDetails(parentDataRes.data.placesDetails, placeName);
+              
+              if (place) {
+                const destination = transformPlaceToDestination(place, parentDataRes.data, destinationId);
+                setDestinationDetails(destination);
+                setIsWishlisted(false);
+                setShareCount(0);
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching parent data:', error);
+          }
+        }
+        
+        // Regular destination fetch
         const detailUrl = `${API_BASE_URL}/api/admin/destination/${destinationId}`.replace(/\?+$/, '');
         const detailRes = await fetch(detailUrl);
         const detailData = await detailRes.json();
+        
         if (detailData.status && detailData.data) {
-          const destination = detailData.data;
-          // Add dummy reviews if no reviews exist
-          if (!destination.reviews || destination.reviews.length === 0) {
-            destination.reviews = [
-              {
-                userName: 'Priya Sharma',
-                rating: 5,
-                comment: 'Amazing experience! The place was beautiful and the trip was well organized. Highly recommend this destination for a peaceful getaway.',
-                date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-              },
-              {
-                userName: 'Rahul Kumar',
-                rating: 4,
-                comment: 'Great destination with stunning views. The accommodations were comfortable and the local food was delicious. Would visit again!',
-                date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
-              },
-              {
-                userName: 'Anjali Patel',
-                rating: 5,
-                comment: 'Perfect for solo travelers! Felt safe throughout the trip. The guides were knowledgeable and friendly. Made some great memories here.',
-                date: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString()
-              },
-              {
-                userName: 'Vikram Singh',
-                rating: 4,
-                comment: 'Beautiful location with rich culture. The activities were engaging and the overall experience was memorable. Worth every penny!',
-                date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-              }
-            ];
-          }
+          const destination = addDefaultReviews(detailData.data);
           setDestinationDetails(destination);
           setIsWishlisted(destination.isWishlisted || false);
           setShareCount(destination.shareCount || 0);
@@ -92,6 +183,14 @@ export default function DestinationDetailsPage() {
 
   const fetchDestinationPackages = async () => {
     if (!destinationId) return;
+    
+    // Skip package fetching for composite IDs (placesDetails don't have associated packages)
+    if (isCompositeId(destinationId)) {
+      setPackagesLoading(false);
+      setDestinationPackages([]);
+      setPackageCount(0);
+      return;
+    }
     
     setPackagesLoading(true);
     try {
@@ -116,6 +215,9 @@ export default function DestinationDetailsPage() {
   };
 
   const handleWishlistToggle = async () => {
+    // Disable wishlist for composite IDs (placesDetails)
+    if (isCompositeId(destinationId)) return;
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/destination/${destinationId}/wishlist`, {
         method: isWishlisted ? 'DELETE' : 'POST',
@@ -138,24 +240,29 @@ export default function DestinationDetailsPage() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: destinationDetails.name,
-          text: destinationDetails.description,
-          url: window.location.href
+          title: destinationDetails?.name || 'Destination',
+          text: destinationDetails?.description || '',
+          url: globalThis.location.href
         });
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(globalThis.location.href);
         alert('Link copied to clipboard!');
       }
       
-      // Update share count
-      const response = await fetch(`${API_BASE_URL}/api/destination/${destinationId}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      // Update share count (skip API call for composite IDs)
+      if (!isCompositeId(destinationId)) {
+        const response = await fetch(`${API_BASE_URL}/api/destination/${destinationId}/share`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
       
-      if (response.ok) {
+        if (response.ok) {
+          setShareCount(prev => prev + 1);
+        }
+      } else {
+        // For composite IDs, just update UI without API call
         setShareCount(prev => prev + 1);
       }
     } catch (error) {
@@ -315,12 +422,12 @@ export default function DestinationDetailsPage() {
                             if (firstPackageId) {
                               router.push(`/packages/${firstPackageId}`);
                             } else {
-                              // If no package ID, use a default/static package ID
-                              router.push(`/packages/1`);
+                              // If no package ID, navigate to packages list with destination filter
+                              router.push(`/packages?destination=${destinationId}`);
                             }
                           } else {
-                            // If no packages loaded yet, use a default/static package ID
-                            router.push(`/packages/1`);
+                            // If no packages loaded yet, navigate to packages list with destination filter
+                            router.push(`/packages?destination=${destinationId}`);
                           }
                         }}
                       >
@@ -404,12 +511,6 @@ export default function DestinationDetailsPage() {
                           {attraction.description && (
                             <p className="destination-attraction-description-new">{attraction.description}</p>
                           )}
-                          <button className="destination-attraction-explore-btn-new">
-                            Explore
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     </SwiperSlide>
@@ -526,12 +627,6 @@ export default function DestinationDetailsPage() {
                           {activity.description && (
                             <p className="destination-activity-description-new">{activity.description}</p>
                           )}
-                          <button className="destination-activity-explore-btn-new">
-                            Explore
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     </SwiperSlide>
@@ -628,12 +723,6 @@ export default function DestinationDetailsPage() {
                           {hotel.description && (
                             <p className="destination-hotel-description-new">{hotel.description}</p>
                           )}
-                          <button className="destination-hotel-explore-btn-new">
-                            Explore
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     </SwiperSlide>
@@ -739,12 +828,6 @@ export default function DestinationDetailsPage() {
                           {food.description && (
                             <p className="destination-food-description-new">{food.description}</p>
                           )}
-                          <button className="destination-food-explore-btn-new">
-                            Explore
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     </SwiperSlide>
@@ -827,12 +910,6 @@ export default function DestinationDetailsPage() {
                           {nearby.description && (
                             <p className="destination-nearby-description-new">{nearby.description}</p>
                           )}
-                          <button className="destination-nearby-explore-btn-new">
-                            Explore
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                          </button>
                         </div>
                       </div>
                     </SwiperSlide>

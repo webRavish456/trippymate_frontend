@@ -2,21 +2,21 @@
 import { createStore } from 'redux';
 import rootReducer from './reducers/index';
 
-// Load initial state from localStorage if available (client-side only)
+
 const loadInitialState = () => {
-  // Always return empty state for SSR to avoid hydration mismatch
+
   if (typeof window === 'undefined') {
-    return undefined; // Let reducers use their default initial state
+    return undefined; 
   }
   
-  // On client-side, load user from localStorage synchronously
+
   try {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
     
     if (token && storedUser) {
       const userData = JSON.parse(storedUser);
-      // Handle Google profile picture
+      
       if (userData.picture && !userData.profilePicture) {
         userData.profilePicture = userData.picture;
       }
@@ -31,7 +31,7 @@ const loadInitialState = () => {
     console.error('Error loading initial state from localStorage:', e);
   }
   
-  return undefined; // Let reducers use their default initial state
+  return undefined; 
 };
 
 const store = createStore(
@@ -42,7 +42,7 @@ const store = createStore(
     : undefined
 );
 
-// Subscribe to store changes to sync with localStorage
+
 if (typeof window !== 'undefined') {
   store.subscribe(() => {
     const state = store.getState();

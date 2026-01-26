@@ -7,6 +7,164 @@ import { Grid, useMediaQuery } from "@mui/material";
 
 import { API_BASE_URL } from '@/lib/config';
 
+const NO_IMAGE_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/No-Image-Placeholder-landscape.svg/1024px-No-Image-Placeholder-landscape.svg.png?20240614172314';
+
+// Skeleton Loader Components
+const PackageCardSkeleton = () => (
+  <div style={{
+    backgroundColor: 'white',
+    borderRadius: '20px',
+    overflow: 'hidden',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column'
+  }}>
+    <div style={{
+      width: '100%',
+      height: '260px',
+      backgroundColor: '#e2e8f0',
+      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+    }} />
+    <div style={{ padding: '1.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        height: '24px',
+        width: '80%',
+        backgroundColor: '#e2e8f0',
+        borderRadius: '4px',
+        marginBottom: '12px',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }} />
+      <div style={{
+        height: '16px',
+        width: '100%',
+        backgroundColor: '#e2e8f0',
+        borderRadius: '4px',
+        marginBottom: '8px',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }} />
+      <div style={{
+        height: '16px',
+        width: '90%',
+        backgroundColor: '#e2e8f0',
+        borderRadius: '4px',
+        marginBottom: '1.5rem',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }} />
+      <div style={{
+        height: '40px',
+        width: '100%',
+        backgroundColor: '#e2e8f0',
+        borderRadius: '12px',
+        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+      }} />
+    </div>
+  </div>
+);
+
+const PackagesSkeleton = () => (
+  <Grid container spacing={2} style={{ margin: '0rem 6rem' }}>
+    {[1, 2, 3, 4, 5, 6].map((i) => (
+      <Grid size={{xs: 12, sm: 6, md: 4}} key={i}>
+        <PackageCardSkeleton />
+      </Grid>
+    ))}
+  </Grid>
+);
+
+// Image Carousel Component with Auto-scroll
+const ImageCarousel = ({ images, title }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const imagesArray = images && images.length > 0 ? images : [NO_IMAGE_URL];
+
+  useEffect(() => {
+    if (imagesArray.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % imagesArray.length);
+      }, 3000); // Change image every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [imagesArray.length]);
+
+  return (
+    <div style={{ 
+      position: 'relative', 
+      width: '100%', 
+      height: '100%',
+      overflow: 'hidden'
+    }}>
+      <div style={{
+        display: 'flex',
+        width: `${imagesArray.length * 100}%`,
+        height: '100%',
+        transform: `translateX(-${currentIndex * (100 / imagesArray.length)}%)`,
+        transition: 'transform 0.8s ease-in-out'
+      }}>
+        {imagesArray.map((img, index) => (
+          <img 
+            key={index}
+            src={img || NO_IMAGE_URL} 
+            alt={`${title} - Image ${index + 1}`}
+            onError={(e) => {
+              e.target.src = NO_IMAGE_URL;
+            }}
+            style={{ 
+              width: `${100 / imagesArray.length}%`, 
+              height: '100%', 
+              objectFit: 'cover',
+              flexShrink: 0
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Image Indicators */}
+      {imagesArray.length > 1 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '1rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '0.5rem',
+          zIndex: 10
+        }}>
+          {imagesArray.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              aria-label={`Go to image ${index + 1}`}
+              style={{
+                width: currentIndex === index ? '24px' : '8px',
+                height: '8px',
+                borderRadius: '4px',
+                backgroundColor: currentIndex === index ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                border: 'none',
+                padding: 0,
+                fontFamily: 'inherit'
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex(index);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setCurrentIndex(index);
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 function PackagesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -22,130 +180,16 @@ function PackagesPageContent() {
   const [selectedPackageType, setSelectedPackageType] = useState(packageType || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [favorites, setFavorites] = useState(new Set());
-  const [popularDestinations, setPopularDestinations] = useState([]);
+  const [popularPackages, setPopularPackages] = useState([]);
 
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     fetchPackages();
-    fetchPopularDestinations();
+    fetchPopularPackages();
   }, [destinationId, selectedCategory, selectedPackageType, searchQuery]);
 
-  // Dummy Packages Data
-  const dummyPackages = [
-    {
-      _id: '1',
-      title: 'Manali Adventure Escape',
-      description: 'Trek, camp, and explore Manali with verified guides. Experience the best of Himalayan adventure.',
-      duration: '3N/4D',
-      destination: 'Manali',
-      source: 'Delhi',
-      category: 'Adventure',
-      packageType: 'Adventure Packages',
-      price: { adult: 8999 },
-      rating: 4.8,
-      reviewsCount: 124,
-      images: ['https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '2',
-      title: 'Leh Ladakh Bike Expedition',
-      description: 'Ride through the highest motorable roads with expert guides. An unforgettable Himalayan journey.',
-      duration: '7N/8D',
-      destination: 'Leh Ladakh',
-      source: 'Delhi',
-      category: 'Adventure',
-      packageType: 'Adventure Packages',
-      price: { adult: 24999 },
-      rating: 4.9,
-      reviewsCount: 89,
-      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '3',
-      title: 'Darjeeling Tea Trail',
-      description: 'Experience sunrise at Tiger Hill and ride the toy train. Explore lush tea estates with local experts.',
-      duration: '5N/6D',
-      destination: 'Darjeeling',
-      source: 'Kolkata',
-      category: 'Cultural',
-      packageType: 'Cultural Packages',
-      price: { adult: 14999 },
-      rating: 4.8,
-      reviewsCount: 98,
-      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '4',
-      title: 'Nainital Lake Retreat',
-      description: 'Serene lake views and mountain tranquility. Perfect getaway for nature lovers and peace seekers.',
-      duration: '3N/4D',
-      destination: 'Nainital',
-      source: 'Delhi',
-      category: 'Holiday',
-      packageType: 'Holiday Packages',
-      price: { adult: 9999 },
-      rating: 4.6,
-      reviewsCount: 142,
-      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '5',
-      title: 'Shimla Heritage Tour',
-      description: 'Explore colonial charm and mountain beauty. Perfect blend of history and nature in the Himalayas.',
-      duration: '4N/5D',
-      destination: 'Shimla',
-      source: 'Delhi',
-      category: 'Cultural',
-      packageType: 'Cultural Packages',
-      price: { adult: 12499 },
-      rating: 4.7,
-      reviewsCount: 156,
-      images: ['https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '6',
-      title: 'Coorg Coffee Plantation Tour',
-      description: 'Discover the aroma of coffee plantations and enjoy the scenic beauty of Coorg hills.',
-      duration: '3N/4D',
-      destination: 'Coorg',
-      source: 'Bangalore',
-      category: 'Holiday',
-      packageType: 'Holiday Packages',
-      price: { adult: 10999 },
-      rating: 4.5,
-      reviewsCount: 112,
-      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '7',
-      title: 'Goa Beach Paradise',
-      description: 'Sun, sand, and sea adventures await. Perfect beach getaway with water sports and nightlife.',
-      duration: '4N/5D',
-      destination: 'Goa',
-      source: 'Mumbai',
-      category: 'Beach',
-      packageType: 'Beach Packages',
-      price: { adult: 11999 },
-      rating: 4.6,
-      reviewsCount: 203,
-      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
-    },
-    {
-      _id: '8',
-      title: 'Kerala Backwaters Cruise',
-      description: 'Experience the serene backwaters of Kerala in traditional houseboats. A peaceful journey through nature.',
-      duration: '5N/6D',
-      destination: 'Kerala',
-      source: 'Kochi',
-      category: 'Holiday',
-      packageType: 'Holiday Packages',
-      price: { adult: 15999 },
-      rating: 4.7,
-      reviewsCount: 178,
-      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop']
-    }
-  ];
+  // All packages data is now fetched from API - no dummy data
 
   const fetchPackages = async () => {
     try {
@@ -213,122 +257,76 @@ function PackagesPageContent() {
           setPackageCounts(Object.entries(counts).map(([_id, count]) => ({ _id, count })));
         }
       } else {
-        // Fallback to dummy data if API fails
-        console.warn('API failed, using dummy data');
-        let filteredPackages = dummyPackages;
-
-        if (selectedCategory !== 'all') {
-          filteredPackages = dummyPackages.filter(pkg => pkg.category === selectedCategory);
-        }
-
-        if (searchQuery) {
-          filteredPackages = filteredPackages.filter(pkg => 
-            pkg.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            pkg.destination.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-        
-        setPackages(filteredPackages);
-        setTotalCount(filteredPackages.length);
-        
-        const counts = categories
-          .filter(cat => cat.value !== 'all')
-          .map(cat => ({
-            _id: cat.value,
-            count: cat.count || 0
-          }));
-        setPackageCounts(counts);
+        // No packages found
+        setPackages([]);
+        setTotalCount(0);
+        setPackageCounts([]);
       }
       
     } catch (error) {
       console.error('Error fetching packages:', error);
-      // Fallback to dummy data on error
-      let filteredPackages = dummyPackages;
-
-      if (selectedCategory !== 'all') {
-        filteredPackages = dummyPackages.filter(pkg => pkg.category === selectedCategory);
-      }
-
-      if (searchQuery) {
-        filteredPackages = filteredPackages.filter(pkg => 
-          pkg.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          pkg.destination.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
-      
-      setPackages(filteredPackages);
-      setTotalCount(filteredPackages.length);
+      setPackages([]);
+      setTotalCount(0);
+      setPackageCounts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPopularDestinations = async () => {
+  const fetchPopularPackages = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/user/popular-destinations?limit=6`);
+      const response = await fetch(`${API_BASE_URL}/api/user/getPackages?page=1&limit=6&isPopular=true`);
       const data = await response.json();
 
       if (data.status && data.data && data.data.length > 0) {
-        setPopularDestinations(data.data);
+        setPopularPackages(data.data);
       } else {
-        // Fallback to static data
-        setPopularDestinations(getUniqueDestinations());
+        setPopularPackages([]);
       }
     } catch (error) {
-      console.error('Error fetching popular destinations:', error);
-      // Fallback to static data
-      setPopularDestinations(getUniqueDestinations());
+      console.error('Error fetching popular packages:', error);
+      setPopularPackages([]);
     }
   };
 
-  const categories = [
-    { value: 'all', label: 'All Categories' },
-    { value: 'Adventure', label: 'Adventure', count: 24, description: 'Thrilling experiences for adrenaline seekers' },
-    { value: 'Family', label: 'Family', count: 18, description: 'Perfect trips for the whole family' },
-    { value: 'Honeymoon', label: 'Honeymoon', count: 15, description: 'Romantic getaways for couples' },
-    { value: 'Holiday', label: 'Holiday', count: 32, description: 'Relaxing holiday packages' },
-    { value: 'Cultural', label: 'Cultural', count: 12, description: 'Explore rich cultural heritage' },
-    { value: 'Religious', label: 'Religious', count: 20, description: 'Spiritual journeys and pilgrimages' },
-    { value: 'Wildlife', label: 'Wildlife', count: 14, description: 'Wildlife safaris and nature tours' },
-    { value: 'Beach', label: 'Beach', count: 16, description: 'Sun, sand, and sea adventures' },
-    { value: 'Hill Station', label: 'Hill Station', count: 22, description: 'Scenic mountain retreats' },
-    { value: 'Weekend Getaways', label: 'Weekend Getaways', count: 19, description: 'Quick escapes for weekend relaxation' }
-  ];
+  // Categories are now dynamically generated from packageCounts
+  const getCategories = () => {
+    const categoryLabels = {
+      'adventure': { label: 'Adventure', description: 'Thrilling experiences for adrenaline seekers' },
+      'family': { label: 'Family', description: 'Perfect trips for the whole family' },
+      'honeymoon': { label: 'Honeymoon', description: 'Romantic getaways for couples' },
+      'holiday': { label: 'Holiday', description: 'Relaxing holiday packages' },
+      'cultural': { label: 'Cultural', description: 'Explore rich cultural heritage' },
+      'religious': { label: 'Religious', description: 'Spiritual journeys and pilgrimages' },
+      'wildlife': { label: 'Wildlife', description: 'Wildlife safaris and nature tours' },
+      'beach': { label: 'Beach', description: 'Sun, sand, and sea adventures' },
+      'hill-station': { label: 'Hill Station', description: 'Scenic mountain retreats' },
+      'weekend': { label: 'Weekend Getaways', description: 'Quick escapes for weekend relaxation' },
+      'other': { label: 'Other', description: 'Other travel packages' }
+    };
 
-  const getPackageCount = (type) => {
-    const count = packageCounts.find(p => p._id === type);
-    return count ? count.count : 0;
-  };
+    const baseCategories = [{ value: 'all', label: 'All Categories' }];
+    
+    // Add categories from packageCounts with dynamic counts
+    const dynamicCategories = packageCounts
+      .filter(pc => pc._id && pc.count > 0)
+      .map(pc => {
+        const categoryInfo = categoryLabels[pc._id] || { label: pc._id, description: '' };
+        return {
+          value: pc._id,
+          label: categoryInfo.label,
+          count: pc.count,
+          description: categoryInfo.description
+        };
+      })
+      .sort((a, b) => b.count - a.count); // Sort by count descending
 
-  // Get unique destinations for the circular images - Dummy Data
-  const getUniqueDestinations = () => {
-    return [
-      {
-        name: 'Manali',
-        image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=400&fit=crop'
-      },
-      {
-        name: 'Leh Ladakh',
-        image: 'https://images.unsplash.com/photo-1539650116574-75c0c6d73a6e?w=400&h=400&fit=crop'
-      },
-      {
-        name: 'Shimla',
-        image: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=400&fit=crop'
-      },
-      {
-        name: 'Darjeeling',
-        image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop'
-      },
-      {
-        name: 'Nainital',
-        image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop'
-      },
-      {
-        name: 'Coorg',
-        image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop'
-      }
-    ];
+    return [...baseCategories, ...dynamicCategories];
   };
+  
+  const categories = getCategories();
+
+  // All destinations are now fetched from API - no static data
 
   const toggleFavorite = (packageId, e) => {
     e.preventDefault();
@@ -364,33 +362,54 @@ function PackagesPageContent() {
     return 'Local Captain';
   };
 
-  const uniqueDestinations = getUniqueDestinations();
-
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#f8fafc' }}>
+    <div style={{ minHeight: '100%' }}>
          <section>
       <div style={{
         background: 'linear-gradient(135deg, #1D4ED8 0%, #1e40af 100%)',
         padding: '4rem 6rem',
         color: 'white',
         textAlign: 'center',
-        marginBottom: '3rem'
+        marginBottom: '3rem',
+        minHeight: '500px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center'
       }}>
         <h1 style={{ 
           fontSize: '3.5rem', 
           fontWeight: '800', 
-          marginBottom: '1rem',
-          textShadow: '0 2px 10px rgba(0,0,0,0.2)'
+          marginBottom: '1.5rem',
+          textShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          letterSpacing: '-2px',
+          lineHeight: '1.1',
+          color: 'white'
         }}>
           Discover Amazing Packages
         </h1>
         <p style={{ 
-          fontSize: '1.25rem', 
-          opacity: 0.95,
-          maxWidth: '600px',
-          margin: '0 auto'
+          fontSize: '1.75rem', 
+          color: 'white',
+          maxWidth: '700px',
+          margin: '0 auto 1.5rem auto',
+          letterSpacing: '3px',
+          lineHeight: '1.6',
+          textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+          fontWeight: '300'
         }}>
-          Explore handpicked travel experiences with verified captains and travel companions
+          Explore . Experience . Share
+        </p>
+        <p style={{ 
+          fontSize: '1.125rem', 
+          color: 'rgba(255, 255, 255, 0.9)',
+          maxWidth: '800px',
+          margin: '0 auto',
+          lineHeight: '1.8',
+          textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          fontWeight: '400'
+        }}>
+          Explore handpicked travel experiences with verified captains and travel companions. Discover amazing destinations, curated itineraries, and unforgettable adventures. Your journey to extraordinary experiences starts here.
         </p>
       </div>
       </section>
@@ -417,21 +436,26 @@ function PackagesPageContent() {
           justifyContent: 'center',
           marginBottom: '3rem'
         }}>
-          {(popularDestinations.length > 0 ? popularDestinations : getUniqueDestinations()).map((dest, index) => (
-              <div 
-                key={index}
+          {popularPackages.map((pkg, index) => (
+              <button 
+                key={pkg._id || index}
+                type="button"
+                onClick={() => {
+                  router.push(`/packages/${pkg._id}`);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    router.push(`/packages/${pkg._id}`);
+                  }
+                }}
+                aria-label={`View package ${pkg?.title || 'package'}`}
             style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   cursor: 'pointer',
                   transition: 'transform 0.2s'
-                }}
-                onClick={() => {
-                  // Navigate to packages filtered by destination
-                  const params = new URLSearchParams();
-                  params.set('destination', dest.name);
-                  router.push(`/packages?${params.toString()}`);
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'scale(1.05)';
@@ -450,9 +474,12 @@ function PackagesPageContent() {
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}>
                   <img 
-                    src={dest.image} 
-                    alt={dest.name}
-            style={{
+                    src={pkg?.images?.[0] || NO_IMAGE_URL} 
+                    alt={pkg?.title || 'Package'}
+                    onError={(e) => {
+                      e.target.src = NO_IMAGE_URL;
+                    }}
+                   style={{
                       width: '100%', 
                       height: '100%', 
                       objectFit: 'cover' 
@@ -463,11 +490,18 @@ function PackagesPageContent() {
                   fontSize: '1rem', 
                   fontWeight: '600', 
                   color: '#1f2937',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  lineHeight: '1.4',
+                  maxWidth: '120px',
+                  wordBreak: 'break-word'
                 }}>
-                  {dest.name}
+                  {pkg?.title || 'Package'}
                 </span>
-              </div>
+              </button>
             ))}
       </div>
 
@@ -483,20 +517,31 @@ function PackagesPageContent() {
           {categories.map((category, index) => {
             const isSelected = selectedCategory === category.value;
             
+            const handleCategoryClick = () => {
+              setSelectedCategory(category.value);
+              // Update URL with category filter
+              const params = new URLSearchParams(searchParams.toString());
+              if (category.value === 'all') {
+                params.delete('category');
+              } else {
+                params.set('category', category.value);
+              }
+              router.push(`/packages?${params.toString()}`);
+            };
+
+            const handleKeyDown = (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCategoryClick();
+              }
+            };
+
             return (
-              <div
+              <button
                 key={category.value}
-                onClick={() => {
-                  setSelectedCategory(category.value);
-                  // Update URL with category filter
-                  const params = new URLSearchParams(searchParams.toString());
-                  if (category.value === 'all') {
-                    params.delete('category');
-                  } else {
-                    params.set('category', category.value);
-                  }
-                  router.push(`/packages?${params.toString()}`);
-                }}
+                type="button"
+                onClick={handleCategoryClick}
+                onKeyDown={handleKeyDown}
                 style={{
                   background: isSelected 
                     ? '#1D4ED8' 
@@ -521,7 +566,8 @@ function PackagesPageContent() {
                   backdropFilter: isSelected ? 'none' : 'blur(10px)',
                   position: 'relative',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  fontFamily: 'inherit'
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
@@ -554,48 +600,46 @@ function PackagesPageContent() {
                     {category.count}
                   </span>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>
 
       {/* Packages Grid */}
-        {(
-          <div style={{ marginTop: '2rem 6rem' }}>
-      {loading ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '4rem',
-                backgroundColor: 'white',
-                borderRadius: '16px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-              }}>
-                <div style={{ fontSize: '1.25rem', color: '#64748b', fontWeight: '500' }}>
-                  Loading packages...
-                </div>
-        </div>
-      ) : packages.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '4rem',
-          backgroundColor: 'white',
-                borderRadius: '16px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-        }}>
-                <div style={{ fontSize: '1.25rem', color: '#64748b', fontWeight: '500' }}>
-                  No packages found in this category
-                </div>
-        </div>
-      ) : (
+      <div style={{ marginTop: '2rem 6rem' }}>
+        {loading && <PackagesSkeleton />}
+        
+        {!loading && packages.length === 0 && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '4rem',
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+          }}>
+            <div style={{ fontSize: '1.25rem', color: '#64748b', fontWeight: '500' }}>
+              No packages found in this category
+            </div>
+          </div>
+        )}
+        
+        {!loading && packages.length > 0 && (
               <>
                 {/* First Package - Horizontal Layout */}
                 {packages.length > 0 && (
-                  <Grid container spacing={2} style={{alignItems: 'stretch', margin: '0rem 6rem 2rem 6rem' }}>
+                  <Grid container spacing={4} style={{alignItems: 'stretch', margin: '0rem 6rem 2rem 6rem' }}>
                     <Grid size={{xs: 12, md: 8}} style={{ display: 'flex' }}>
                       <div
                         key={packages[0]._id}
                         className="first-package-card-grid"
                         onClick={() => router.push(`/packages/${packages[0]._id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            router.push(`/packages/${packages[0]._id}`);
+                          }
+                        }}
+                        aria-label={`View details for ${packages[0].title}`}
                         style={{
                           backgroundColor: 'white',
                           borderRadius: '24px',
@@ -606,7 +650,7 @@ function PackagesPageContent() {
                           border: '1px solid #f1f5f9',
                           width: '100%',
                           height: '100%',
-          display: 'grid', 
+                         display: 'grid', 
                           gridTemplateColumns: '1fr 1fr'
                         }}
                         onMouseEnter={(e) => {
@@ -627,17 +671,10 @@ function PackagesPageContent() {
                           background: '#1D4ED8'
                         }}
                       >
-                        {packages[0].images && packages[0].images.length > 0 && (
-                          <img 
-                            src={packages[0].images[0]} 
-                            alt={packages[0].title}
-                            style={{ 
-                              width: '100%', 
-                              height: '100%', 
-                              objectFit: 'cover'
-                            }}
-                          />
-                        )}
+                        <ImageCarousel 
+                          images={packages[0]?.images} 
+                          title={packages[0]?.title || 'Package'}
+                        />
                         
                         {/* Verified Captain Badge */}
                         <div style={{
@@ -663,11 +700,13 @@ function PackagesPageContent() {
                         </div>
                         
                         {/* Heart Icon */}
-                        <div
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             toggleFavorite(packages[0]._id, e);
                           }}
+                          aria-label={favorites.has(packages[0]._id) ? 'Remove from favorites' : 'Add to favorites'}
                           style={{
                             position: 'absolute',
                             top: '1.5rem',
@@ -681,7 +720,10 @@ function PackagesPageContent() {
                             justifyContent: 'center',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            border: 'none',
+                            padding: 0,
+                            fontFamily: 'inherit'
                           }}
                         >
                           <svg 
@@ -691,10 +733,11 @@ function PackagesPageContent() {
                             fill={favorites.has(packages[0]._id) ? '#ef4444' : 'none'} 
                             stroke={favorites.has(packages[0]._id) ? '#ef4444' : '#475569'} 
                             strokeWidth="2.5"
+                            aria-hidden="true"
                           >
                             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                           </svg>
-                        </div>
+                        </button>
 
                         {/* Title and Details Overlay */}
               <div style={{
@@ -719,12 +762,34 @@ function PackagesPageContent() {
                           {/* Details Row */}
                           <div style={{ 
                             display: 'flex', 
-                            gap: '1rem',
-                            flexWrap: 'nowrap',
-                            alignItems: 'center',
-                            whiteSpace: 'nowrap'
+                            flexDirection: 'column',
+                            gap: '0.5rem'
                           }}>
-                            {packages[0].duration && (
+                            {/* First Row: Duration and Group Trip */}
+                            <div style={{ 
+                              display: 'flex', 
+                              gap: '1rem',
+                              alignItems: 'center',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {packages[0].duration && (
+                                <div style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.5rem', 
+                                  color: 'white', 
+                                  fontSize: '0.875rem',
+                                  fontWeight: '600',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                                    <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                                  </svg>
+                                  <span>{formatDuration(packages[0].duration)}</span>
+                                </div>
+                              )}
+                              
                               <div style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
@@ -735,28 +800,13 @@ function PackagesPageContent() {
                                 whiteSpace: 'nowrap'
                               }}>
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                                  <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                                  <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H16.5c-.8 0-1.54.5-1.85 1.26l-1.85 4.74H12v8h2v-6h1.5l.5 6H20zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm1.5 2h-3C3.67 8 3 8.67 3 9.5V14h2v7h2v-7h2V9.5C9 8.67 8.33 8 7 8z" fill="currentColor"/>
                                 </svg>
-                                <span>{formatDuration(packages[0].duration)}</span>
+                                <span>Group Trip</span>
                               </div>
-                            )}
-                            
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '0.5rem', 
-                              color: 'white', 
-                              fontSize: '0.875rem',
-                              fontWeight: '600',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H16.5c-.8 0-1.54.5-1.85 1.26l-1.85 4.74H12v8h2v-6h1.5l.5 6H20zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm1.5 2h-3C3.67 8 3 8.67 3 9.5V14h2v7h2v-7h2V9.5C9 8.67 8.33 8 7 8z" fill="currentColor"/>
-                              </svg>
-                              <span>Group Trip</span>
                             </div>
-                            
+
+                            {/* Second Row: Local Captain */}
                             <div style={{ 
                               display: 'flex', 
                               alignItems: 'center', 
@@ -874,7 +924,7 @@ function PackagesPageContent() {
                               View Details
                             </Link>
                             <Link
-                              href={`/packages/${packages[0]._id}?book=true`}
+                              href={`/packages/${packages[0]._id}/book`}
                               onClick={(e) => e.stopPropagation()}
                               style={{ 
                                 flex: 1,
@@ -912,7 +962,16 @@ function PackagesPageContent() {
                     {packages.length > 1 && (
                       <Grid size={{xs: 12, md: 4}} style={{ display: 'flex' }}>
                         <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() => router.push(`/packages/${packages[1]._id}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              router.push(`/packages/${packages[1]._id}`);
+                            }
+                          }}
+                          aria-label={`View details for ${packages[1].title}`}
                           style={{
                             backgroundColor: 'white',
                             borderRadius: '20px',
@@ -943,24 +1002,10 @@ function PackagesPageContent() {
                             overflow: 'hidden',
                             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                           }}>
-                            {packages[1].images && packages[1].images.length > 0 && (
-                              <img 
-                                src={packages[1].images[0]} 
-                                alt={packages[1].title}
-                                style={{ 
-                                  width: '100%', 
-                                  height: '100%', 
-                                  objectFit: 'cover',
-                                  transition: 'transform 0.3s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.target.style.transform = 'scale(1.1)';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.target.style.transform = 'scale(1)';
-                                }}
-                              />
-                            )}
+                            <ImageCarousel 
+                              images={packages[1]?.images} 
+                              title={packages[1]?.title || 'Package'}
+                            />
                             
                             {/* Verified Captain Badge */}
                   <div style={{ 
@@ -986,11 +1031,14 @@ function PackagesPageContent() {
                             </div>
                             
                             {/* Heart Icon */}
-                            <div
+                            <button
+                              type="button"
                               onClick={(e) => {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 toggleFavorite(packages[1]._id, e);
                               }}
+                              aria-label={favorites.has(packages[1]._id) ? 'Remove from favorites' : 'Add to favorites'}
                               style={{
                                 position: 'absolute',
                                 top: '1.25rem',
@@ -1004,7 +1052,10 @@ function PackagesPageContent() {
                                 justifyContent: 'center',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                border: 'none',
+                                padding: 0,
+                                fontFamily: 'inherit'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
@@ -1022,10 +1073,11 @@ function PackagesPageContent() {
                                 fill={favorites.has(packages[1]._id) ? '#ef4444' : 'none'} 
                                 stroke={favorites.has(packages[1]._id) ? '#ef4444' : '#475569'} 
                                 strokeWidth="2.5"
+                                aria-hidden="true"
                               >
                                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                               </svg>
-                            </div>
+                            </button>
 
                             {/* Title and Details Overlay */}
                             <div style={{
@@ -1050,13 +1102,35 @@ function PackagesPageContent() {
                               {/* Details Row */}
                               <div style={{ 
                                 display: 'flex', 
-                                gap: '1rem',
-                                flexWrap: 'nowrap',
-                                alignItems: 'center',
-                                whiteSpace: 'nowrap'
+                                flexDirection: 'column',
+                                gap: '0.5rem'
                               }}>
-                                {packages[1].duration && (
-                                  <div style={{ 
+                                {/* First Row: Duration and Group Trip */}
+                                <div style={{ 
+                                  display: 'flex', 
+                                  gap: '1rem',
+                                  alignItems: 'center',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {packages[1].duration && (
+                                    <div style={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      gap: '0.5rem', 
+                                      color: 'white', 
+                                      fontSize: '0.875rem',
+                                      fontWeight: '600',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                                        <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                                      </svg>
+                                      <span>{formatDuration(packages[1].duration)}</span>
+                                    </div>
+                                  )}
+
+                                  <div style={{
                                     display: 'flex', 
                                     alignItems: 'center', 
                                     gap: '0.5rem', 
@@ -1066,28 +1140,13 @@ function PackagesPageContent() {
                                     whiteSpace: 'nowrap'
                                   }}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                                      <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                                      <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H16.5c-.8 0-1.54.5-1.85 1.26l-1.85 4.74H12v8h2v-6h1.5l.5 6H20zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm1.5 2h-3C3.67 8 3 8.67 3 9.5V14h2v7h2v-7h2V9.5C9 8.67 8.33 8 7 8z" fill="currentColor"/>
                                     </svg>
-                                    <span>{formatDuration(packages[1].duration)}</span>
-                  </div>
-                                )}
-
-                    <div style={{
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '0.5rem', 
-                                  color: 'white', 
-                      fontSize: '0.875rem',
-                                  fontWeight: '600',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H16.5c-.8 0-1.54.5-1.85 1.26l-1.85 4.74H12v8h2v-6h1.5l.5 6H20zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm1.5 2h-3C3.67 8 3 8.67 3 9.5V14h2v7h2v-7h2V9.5C9 8.67 8.33 8 7 8z" fill="currentColor"/>
-                                  </svg>
-                                  <span>Group Trip</span>
+                                    <span>Group Trip</span>
+                                  </div>
                                 </div>
                                 
+                                {/* Second Row: Local Captain */}
                                 <div style={{ 
                                   display: 'flex', 
                                   alignItems: 'center', 
@@ -1196,7 +1255,7 @@ function PackagesPageContent() {
                                 View Details
                               </Link>
                               <Link
-                                href={`/packages/${packages[1]._id}?book=true`}
+                                href={`/packages/${packages[1]._id}/book`}
                                 onClick={(e) => e.stopPropagation()}
                                 style={{ 
                                   flex: 1,
@@ -1236,11 +1295,20 @@ function PackagesPageContent() {
 
                 {/* Rest of Packages - Grid Layout */}
                 {packages.length > 2 && (
-                  <Grid container spacing={2} style={{ margin: '0rem 6rem' }}>
+                  <Grid container spacing={4} style={{ margin: '0rem 6rem' , paddingBottom: '80px'}}>
                     {packages.slice(2).map((pkg) => (
                       <Grid size={{xs: 12, sm: isSmallScreen ? 12 : 6, md: 4}} key={pkg._id}>
                         <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() => router.push(`/packages/${pkg._id}`)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              router.push(`/packages/${pkg._id}`);
+                            }
+                          }}
+                          aria-label={`View details for ${pkg.title}`}
                     style={{
                       backgroundColor: 'white',
                       borderRadius: '20px',
@@ -1270,31 +1338,10 @@ function PackagesPageContent() {
                       overflow: 'hidden',
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
                     }}>
-                      {(() => {
-                        const imageUrl = (pkg.images && pkg.images.length > 0) 
-                          ? pkg.images[0] 
-                          : (packages.length > 1 && packages[1].images && packages[1].images.length > 0) 
-                            ? packages[1].images[0] 
-                            : null;
-                        return imageUrl && (
-                          <img 
-                            src={imageUrl} 
-                            alt={pkg.title}
-                            style={{ 
-                              width: '100%', 
-                              height: '100%', 
-                              objectFit: 'cover',
-                              transition: 'transform 0.3s ease'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.target.style.transform = 'scale(1.1)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.target.style.transform = 'scale(1)';
-                            }}
-                          />
-                        );
-                      })()}
+                      <ImageCarousel 
+                        images={pkg?.images} 
+                        title={pkg?.title || 'Package'}
+                      />
                       
                       {/* Verified Captain Badge */}
                       <div style={{
@@ -1320,11 +1367,14 @@ function PackagesPageContent() {
                       </div>
                       
                       {/* Heart Icon */}
-                      <div
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.preventDefault();
+                          e.stopPropagation();
                           toggleFavorite(pkg._id, e);
                         }}
+                        aria-label={favorites.has(pkg._id) ? 'Remove from favorites' : 'Add to favorites'}
                         style={{
                           position: 'absolute',
                           top: '1.25rem',
@@ -1338,7 +1388,10 @@ function PackagesPageContent() {
                           justifyContent: 'center',
                           cursor: 'pointer',
                           transition: 'all 0.2s',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                          border: 'none',
+                          padding: 0,
+                          fontFamily: 'inherit'
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
@@ -1356,10 +1409,11 @@ function PackagesPageContent() {
                           fill={favorites.has(pkg._id) ? '#ef4444' : 'none'} 
                           stroke={favorites.has(pkg._id) ? '#ef4444' : '#475569'} 
                           strokeWidth="2.5"
+                          aria-hidden="true"
                         >
                           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                         </svg>
-                      </div>
+                      </button>
 
                       {/* Title and Details Overlay */}
                       <div style={{
@@ -1384,12 +1438,34 @@ function PackagesPageContent() {
                         {/* Details Row */}
                         <div style={{ 
                           display: 'flex', 
-                          gap: '1rem',
-                          flexWrap: 'nowrap',
-                          alignItems: 'center',
-                          whiteSpace: 'nowrap'
+                          flexDirection: 'column',
+                          gap: '0.5rem'
                         }}>
-                          {pkg.duration && (
+                          {/* First Row: Duration and Group Trip */}
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: '1rem',
+                            alignItems: 'center',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {pkg.duration && (
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem', 
+                                color: 'white', 
+                                fontSize: '0.875rem',
+                                fontWeight: '600',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
+                                  <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                                </svg>
+                                <span>{formatDuration(pkg.duration)}</span>
+                              </div>
+                            )}
+                            
                             <div style={{ 
                               display: 'flex', 
                               alignItems: 'center', 
@@ -1400,28 +1476,13 @@ function PackagesPageContent() {
                               whiteSpace: 'nowrap'
                             }}>
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="currentColor"/>
-                                <path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/>
+                                <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H16.5c-.8 0-1.54.5-1.85 1.26l-1.85 4.74H12v8h2v-6h1.5l.5 6H20zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm1.5 2h-3C3.67 8 3 8.67 3 9.5V14h2v7h2v-7h2V9.5C9 8.67 8.33 8 7 8z" fill="currentColor"/>
                               </svg>
-                              <span>{formatDuration(pkg.duration)}</span>
-                      </div>
-                    )}
-                          
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '0.5rem', 
-                            color: 'white', 
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 7H16.5c-.8 0-1.54.5-1.85 1.26l-1.85 4.74H12v8h2v-6h1.5l.5 6H20zM12.5 11.5c.83 0 1.5-.67 1.5-1.5s-.67-1.5-1.5-1.5S11 9.17 11 10s.67 1.5 1.5 1.5zM5.5 6c1.11 0 2-.89 2-2s-.89-2-2-2-2 .89-2 2 .89 2 2 2zm1.5 2h-3C3.67 8 3 8.67 3 9.5V14h2v7h2v-7h2V9.5C9 8.67 8.33 8 7 8z" fill="currentColor"/>
-                            </svg>
-                            <span>Group Trip</span>
-                  </div>
+                              <span>Group Trip</span>
+                            </div>
+                          </div>
 
+                          {/* Second Row: Local Captain */}
                           <div style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
@@ -1530,7 +1591,7 @@ function PackagesPageContent() {
                           View Details
                         </Link>
                         <Link
-                          href={`/packages/${pkg._id}?book=true`}
+                          href={`/packages/${pkg._id}/book`}
                           onClick={(e) => e.stopPropagation()}
                           style={{ 
                             flex: 1,
@@ -1562,15 +1623,14 @@ function PackagesPageContent() {
                         </Link>
                     </div>
                 </div>
-              </div>
+                      </div>
                       </Grid>
           ))}
                   </Grid>
                 )}
               </>
-            )}
-        </div>
-      )}
+        )}
+      </div>
       </section>
     </div>
   );
@@ -1578,11 +1638,7 @@ function PackagesPageContent() {
 
 export default function PackagesPage() {
   return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Loading...</div>
-      </div>
-    }>
+    <Suspense fallback={<PackagesSkeleton />}>
       <PackagesPageContent />
     </Suspense>
   );

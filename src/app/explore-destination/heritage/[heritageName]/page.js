@@ -8,7 +8,8 @@ import { API_BASE_URL } from '@/lib/config';
 export default function HeritageDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const heritageName = params.heritageName;
+  // Decode URL-encoded characters (e.g., %26 becomes &)
+  const heritageName = params.heritageName ? decodeURIComponent(params.heritageName) : '';
   
   const [heritageData, setHeritageData] = useState(null);
   const [destinations, setDestinations] = useState([]);
@@ -24,33 +25,62 @@ export default function HeritageDetailPage() {
         const heritageData = await heritageRes.json();
         
         if (heritageData.status && heritageData.data) {
-          const heritageNameFormatted = heritageName.replace(/-/g, ' ').toLowerCase();
+          const heritageNameFormatted = heritageName.replace(/-/g, ' ').toLowerCase().trim();
           const matchedHeritage = heritageData.data.find(h => {
-            const heritageNameLower = (h.name || h.title || '').toLowerCase();
-            return heritageNameLower === heritageNameFormatted;
+            const heritageNameLower = (h.name || h.title || '').toLowerCase().trim();
+            // Try exact match first
+            if (heritageNameLower === heritageNameFormatted) return true;
+            // Try matching by replacing special characters and spaces
+            const normalizedUrl = heritageNameLower.replace(/[&\s]+/g, ' ').replace(/\s+/g, ' ').trim();
+            const normalizedFormatted = heritageNameFormatted.replace(/[&\s]+/g, ' ').replace(/\s+/g, ' ').trim();
+            return normalizedUrl === normalizedFormatted;
           });
 
           if (matchedHeritage) {
             setHeritageData(matchedHeritage);
             
-            // Try to fetch destinations for this heritage
-            try {
-              const destRes = await fetch(`${API_BASE_URL}/api/admin/destination/culture/${matchedHeritage._id}/destinations`);
-              const destData = await destRes.json();
-              
-              if (destData.status && destData.data) {
-                setDestinations(destData.data.destinations || destData.data || []);
-              } else if (matchedHeritage.destinations && Array.isArray(matchedHeritage.destinations)) {
-                setDestinations(matchedHeritage.destinations);
-              } else {
-                // Use dummy data
-                setDestinations(getDummyHeritageDestinations(heritageNameFormatted));
-              }
-            } catch (error) {
-              console.error('Error fetching destinations:', error);
-              if (matchedHeritage.destinations && Array.isArray(matchedHeritage.destinations)) {
-                setDestinations(matchedHeritage.destinations);
-              } else {
+            // Check if placesDetails exists (similar to regions)
+            if (matchedHeritage.placesDetails && Array.isArray(matchedHeritage.placesDetails) && matchedHeritage.placesDetails.length > 0) {
+              // Convert placesDetails to destinations format
+              const formattedDestinations = matchedHeritage.placesDetails.map((place, index) => {
+                // Create composite ID: heritageId-placeName-index (same format as regions)
+                // Use original placeName with spaces (Next.js will URL-encode automatically)
+                const placeNameRaw = place.placeName || place.name || 'destination';
+                const compositeId = place._id || place.id || `${matchedHeritage._id}-${placeNameRaw}-${index}`;
+                return {
+                  _id: compositeId,
+                  id: compositeId,
+                  name: place.placeName || place.name || 'Destination',
+                  location: place.location || `${place.placeName || place.name}`,
+                  rating: place.rating || 4.5,
+                  description: place.description || '',
+                  image: place.images?.[0] || place.image || '/explore-destination/default.png',
+                  images: place.images || (place.image ? [place.image] : [])
+                };
+              });
+              setDestinations(formattedDestinations);
+            } else if (matchedHeritage.destinations && Array.isArray(matchedHeritage.destinations)) {
+              setDestinations(matchedHeritage.destinations);
+            } else {
+              // Try to fetch destinations for this heritage (only if placesDetails not available)
+              try {
+                const destRes = await fetch(`${API_BASE_URL}/api/admin/destination/culture/${matchedHeritage._id}/destinations`);
+                
+                // Check if response is ok and content-type is JSON
+                if (destRes.ok && destRes.headers.get('content-type')?.includes('application/json')) {
+                  const destData = await destRes.json();
+                  
+                  if (destData.status && destData.data) {
+                    setDestinations(destData.data.destinations || destData.data || []);
+                  } else {
+                    setDestinations(getDummyHeritageDestinations(heritageNameFormatted));
+                  }
+                } else {
+                  // Response is not JSON (probably HTML error page)
+                  setDestinations(getDummyHeritageDestinations(heritageNameFormatted));
+                }
+              } catch (error) {
+                console.error('Error fetching destinations:', error);
                 setDestinations(getDummyHeritageDestinations(heritageNameFormatted));
               }
             }
@@ -125,6 +155,15 @@ export default function HeritageDetailPage() {
   };
 
   const handleDestinationClick = (destinationId) => {
+    if (!destinationId) {
+      console.error('Destination ID is missing');
+      return;
+    }
+    // Skip navigation for dummy IDs (like 'her1', 'her2', etc.)
+    if (String(destinationId).match(/^(adv|her)\d+$/)) {
+      console.warn('Cannot navigate to dummy destination ID:', destinationId);
+      return;
+    }
     router.push(`/explore-destination/${destinationId}`);
   };
 

@@ -235,7 +235,8 @@ const getDummyStatesData = (regionName) => {
 export default function RegionDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const regionName = params.regionName;
+  // Decode URL-encoded characters (e.g., %26 becomes &)
+  const regionName = params.regionName ? decodeURIComponent(params.regionName) : '';
   
   const [regionData, setRegionData] = useState(null);
   const [states, setStates] = useState([]);
@@ -253,8 +254,23 @@ export default function RegionDetailPage() {
         if (regionsData.status && regionsData.data) {
           // Find the region by matching the name (case-insensitive, handle spaces/dashes)
           const regionNameFormatted = regionName.replace(/-/g, ' ').toLowerCase();
+          
+          // Extract the main region keyword (north, south, east, west)
+          const mainRegionKeywords = ['north', 'south', 'east', 'west'];
+          const regionKeyword = mainRegionKeywords.find(keyword => 
+            regionNameFormatted.includes(keyword)
+          );
+          
+          // Find the region by checking if region name contains the keyword
           const matchedRegion = regionsData.data.find(r => {
+            if (!r || r.status !== 'active') return false;
             const regionNameLower = (r.region || r.name || '').toLowerCase();
+            
+            // If we found a keyword, match by keyword
+            if (regionKeyword) {
+              return regionNameLower.includes(regionKeyword);
+            }
+            // Otherwise, exact match
             return regionNameLower === regionNameFormatted;
           });
 
@@ -266,13 +282,21 @@ export default function RegionDetailPage() {
               const statesRes = await fetch(`${API_BASE_URL}/api/admin/destination/region/${matchedRegion._id}/states`);
               const statesData = await statesRes.json();
               
-              if (statesData.status && statesData.data) {
-                setStates(statesData.data.states || []);
+              console.log('States API Response:', statesData); // Debug log
+              
+              if (statesData.status && statesData.data && statesData.data.states) {
+                setStates(statesData.data.states);
               } else if (matchedRegion.states && Array.isArray(matchedRegion.states)) {
                 // Fallback to states from region data
                 setStates(matchedRegion.states);
+              } else if (matchedRegion.placesDetails && Array.isArray(matchedRegion.placesDetails) && matchedRegion.placesDetails.length > 0) {
+                // Convert placesDetails to states format
+                console.log('Converting placesDetails to states format');
+                const convertedStates = convertPlacesDetailsToStates(matchedRegion.placesDetails, matchedRegion._id, matchedRegion.state);
+                setStates(convertedStates);
               } else {
                 // Use dummy data if no states found
+                console.log('Using dummy data for:', regionNameFormatted);
                 setStates(getDummyStatesData(regionNameFormatted));
               }
             } catch (error) {
@@ -280,13 +304,20 @@ export default function RegionDetailPage() {
               // Fallback to states from region data
               if (matchedRegion.states && Array.isArray(matchedRegion.states)) {
                 setStates(matchedRegion.states);
+              } else if (matchedRegion.placesDetails && Array.isArray(matchedRegion.placesDetails) && matchedRegion.placesDetails.length > 0) {
+                // Convert placesDetails to states format
+                console.log('Converting placesDetails to states format (fallback)');
+                const convertedStates = convertPlacesDetailsToStates(matchedRegion.placesDetails, matchedRegion._id, matchedRegion.state);
+                setStates(convertedStates);
               } else {
                 // Use dummy data if no states found
+                console.log('Using dummy data due to error:', regionNameFormatted);
                 setStates(getDummyStatesData(regionNameFormatted));
               }
             }
           } else {
             // If region not found, use dummy data
+            console.log('Region not found, using dummy data for:', regionNameFormatted);
             setStates(getDummyStatesData(regionNameFormatted));
           }
         }
@@ -302,6 +333,44 @@ export default function RegionDetailPage() {
     }
   }, [regionName]);
 
+  // Helper function to convert placesDetails to states format
+  const convertPlacesDetailsToStates = (placesDetails, regionId, regionState) => {
+    if (!placesDetails || !Array.isArray(placesDetails)) return [];
+    
+    // Group places by state (use place.state if available, otherwise use region.state)
+    const statesMap = new Map();
+    
+    placesDetails.forEach((place, index) => {
+      const stateName = place.state || regionState || 'Unknown State';
+      
+      if (!statesMap.has(stateName)) {
+        statesMap.set(stateName, {
+          name: stateName,
+          state: stateName,
+          destinations: []
+        });
+      }
+      
+      // Create composite ID: regionId-placeName-index
+      const compositeId = `${regionId}-${place.placeName}-${index}`;
+      
+      const destination = {
+        _id: place._id || place.id || compositeId,
+        id: place._id || place.id || compositeId,
+        name: place.placeName || 'Destination',
+        location: place.location || `${place.placeName}, ${stateName}`,
+        rating: place.rating || 4.5,
+        description: place.description || '',
+        image: place.images?.[0] || place.image || '/explore-destination/default.png',
+        images: place.images || (place.image ? [place.image] : [])
+      };
+      
+      statesMap.get(stateName).destinations.push(destination);
+    });
+    
+    return Array.from(statesMap.values());
+  };
+
   // Capitalize first letter of each word
   const formatRegionName = (name) => {
     if (!name) return '';
@@ -312,7 +381,13 @@ export default function RegionDetailPage() {
   };
 
   const handleDestinationClick = (destinationId) => {
-    router.push(`/explore-destination/${destinationId}`);
+    if (!destinationId) {
+      console.error('Destination ID is missing');
+      return;
+    }
+    // Ensure we're using only the ID, not a full path
+    const cleanId = String(destinationId).split('/').pop();
+    router.push(`/explore-destination/${cleanId}`);
   };
 
   // Get region display name - use from data if available, otherwise format from URL
@@ -338,7 +413,7 @@ export default function RegionDetailPage() {
         </div>
       </div>
 
-      <div className="region-detail-container">
+      <div>
 
         {loading ? (
           <div className="region-detail-loading">

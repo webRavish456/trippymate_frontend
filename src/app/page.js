@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Grid } from "@mui/material";
 import AOS from "aos";
 import { Shadows_Into_Light } from "next/font/google";
@@ -8,6 +8,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
+import { API_BASE_URL } from '@/lib/config';
 
 const shadows = Shadows_Into_Light({
   weight: "400",
@@ -17,6 +18,8 @@ const shadows = Shadows_Into_Light({
 export default function Home() {
   const swiperRef = useRef(null);
   const offeringsSwiperRef = useRef(null);
+  const [banners, setBanners] = useState([]);
+  const [bannerLoading, setBannerLoading] = useState(true);
 
   useEffect(() => {
     AOS.init({
@@ -26,19 +29,93 @@ export default function Home() {
       mirror: false,
       offset: 100
     });
+    fetchBanners();
   }, []);
+
+  const fetchBanners = async () => {
+    try {
+      setBannerLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/user/banner/active?position=homepage`);
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        setBanners(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching banners:", error);
+    } finally {
+      setBannerLoading(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-center bg-zinc-50 font-sans dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
       <main className="flex w-full flex-col items-center bg-white dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
-        {/* Companion Banner Section - Dummy Placeholder */}
+        {/* Companion Banner Section */}
         <section className="companion-banner-section-dummy">
-          <div className="companion-banner-dummy-wrapper">
-            <div className="companion-banner-dummy-content">
-              <h1 className="companion-banner-dummy-title">TrippyMates</h1>
-              <p className="companion-banner-dummy-subtitle">Your Travel Companion</p>
+          {bannerLoading ? (
+            <div className="companion-banner-dummy-wrapper">
+              <div className="companion-banner-dummy-content">
+                <h1 className="companion-banner-dummy-title">TrippyMates</h1>
+                <p className="companion-banner-dummy-subtitle">Your Travel Companion</p>
+              </div>
             </div>
-          </div>
+          ) : banners.length > 0 ? (
+            <Swiper
+              modules={[Navigation, Autoplay]}
+              navigation={banners.length > 1}
+              autoplay={{
+                delay: 5000,
+                disableOnInteraction: false,
+              }}
+              loop={banners.length > 1}
+              className="companion-banner-swiper"
+              style={{ width: '100%', height: '100%' }}
+            >
+              {banners.map((banner, index) => (
+                <SwiperSlide key={banner._id || index}>
+                  <div className="banner-slide-wrapper">
+                    {banner.link ? (
+                      <a href={banner.link} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', height: '100%' }}>
+                        <img
+                          src={banner.image}
+                          alt={banner.title || 'Banner'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                        />
+                        <div className="banner-overlay"></div>
+                      </a>
+                    ) : (
+                      <>
+                        <img
+                          src={banner.image}
+                          alt={banner.title || 'Banner'}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                        />
+                        <div className="banner-overlay"></div>
+                      </>
+                    )}
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          ) : (
+            <div className="companion-banner-dummy-wrapper">
+              <div className="companion-banner-dummy-content">
+                <h1 className="companion-banner-dummy-title">TrippyMates</h1>
+                <p className="companion-banner-dummy-subtitle">Your Travel Companion</p>
+              </div>
+            </div>
+          )}
         </section>
 
 
@@ -62,7 +139,7 @@ export default function Home() {
             
 
             <div className="unforgettable-journey-content ">
-              <h1 className="unforgettable-journey-heading" data-aos="fade-down" data-aos-delay="200">
+              <h1 className="unforgettable-journey-heading animation-glow" data-aos="fade-down" data-aos-delay="200">
                 <span>UNFORGETTABLE</span>
                 <span>JOURNEY AWAITS</span>
               </h1>

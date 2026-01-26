@@ -60,15 +60,6 @@ export default function BookNowPage() {
     script.async = true;
     document.body.appendChild(script);
 
-    // Generate available dates (next 30 days)
-    const dates = [];
-    for (let i = 0; i < 30; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() + i);
-      dates.push(date);
-    }
-    setAvailableDates(dates);
-
     return () => {
       // Cleanup
       if (document.body.contains(script)) {
@@ -76,6 +67,81 @@ export default function BookNowPage() {
       }
     };
   }, [packageId]);
+
+  // Generate available dates based on package slots
+  useEffect(() => {
+    if (packageDetails) {
+      const dates = [];
+      
+      // Check if package has slots with dates
+      if (packageDetails.slots && Array.isArray(packageDetails.slots) && packageDetails.slots.length > 0) {
+        // Slots array contains date strings or date objects
+        packageDetails.slots.forEach(slot => {
+          let slotDate;
+          
+          // Handle different slot formats
+          if (typeof slot === 'string') {
+            // If slot is a date string
+            slotDate = new Date(slot);
+          } else if (slot && slot.date) {
+            // If slot is an object with date property
+            slotDate = new Date(slot.date);
+          } else if (slot && slot.tripDate) {
+            // If slot has tripDate property
+            slotDate = new Date(slot.tripDate);
+          } else if (slot instanceof Date) {
+            slotDate = new Date(slot);
+          }
+          
+          // Only add future dates or today
+          if (slotDate && !Number.isNaN(slotDate.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            slotDate.setHours(0, 0, 0, 0);
+            
+            // Add date if it's today or in the future
+            if (slotDate >= today) {
+              dates.push(slotDate);
+            }
+          }
+        });
+        
+        // Sort dates chronologically
+        dates.sort((a, b) => a - b);
+        
+        setAvailableDates(dates);
+      } else if (packageDetails.fromDate && packageDetails.toDate) {
+        // Fallback: Use date range if slots not available
+        const fromDate = new Date(packageDetails.fromDate);
+        const toDate = new Date(packageDetails.toDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Start from today or fromDate, whichever is later
+        const startDate = fromDate > today ? fromDate : today;
+        startDate.setHours(0, 0, 0, 0);
+        toDate.setHours(23, 59, 59, 999);
+        
+        const currentDate = new Date(startDate);
+        
+        while (currentDate <= toDate) {
+          dates.push(new Date(currentDate));
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        setAvailableDates(dates);
+      } else {
+        // Final fallback: Generate next 30 days if no slots or date range
+        const dates = [];
+        for (let i = 0; i < 30; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() + i);
+          dates.push(date);
+        }
+        setAvailableDates(dates);
+      }
+    }
+  }, [packageDetails]);
 
   const fetchPackageDetails = async () => {
     try {
@@ -476,20 +542,105 @@ export default function BookNowPage() {
 
       {/* Header */}
       <section className="packages-hero-section">
-        <div className="packages-hero-container">
-          <div className="packages-hero-content">
-            <h1 className="packages-hero-title">Book Now</h1>
-            {packageDetails?.title && (
-              <h2 className="packages-hero-subtitle" style={{ fontSize: '1.75rem', fontWeight: '600', marginTop: '1rem', marginBottom: '0.5rem' }}>
-                {packageDetails.title}
-              </h2>
-            )}
-            {packageDetails?.overview && (
-              <p className="packages-hero-description" style={{ fontSize: '1rem', color: 'rgba(255, 255, 255, 0.9)', marginTop: '0.5rem', maxWidth: '800px', lineHeight: '1.6' }}>
-                {packageDetails.overview}
-              </p>
-            )}
-          </div>
+        {/* Background Image with Gradient Overlay */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: 'url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          zIndex: 0
+        }} />
+        
+        {/* Gradient Overlay for better text readability */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
+          background: 'linear-gradient(to bottom, rgba(29, 78, 216, 0.4) 0%, rgba(30, 64, 175, 0.3) 50%, rgba(124, 58, 237, 0.2) 100%)',
+          zIndex: 1
+        }} />
+        
+        {/* Decorative Bottom Border */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '60px',
+          background: 'white',
+          clipPath: 'polygon(0 60%, 5% 50%, 10% 55%, 15% 45%, 20% 50%, 25% 40%, 30% 45%, 35% 35%, 40% 40%, 45% 30%, 50% 35%, 55% 25%, 60% 30%, 65% 20%, 70% 25%, 75% 15%, 80% 20%, 85% 10%, 90% 15%, 95% 5%, 100% 10%, 100% 100%, 0 100%)',
+          zIndex: 2
+        }} />
+        
+        <div style={{ 
+          position: 'relative', 
+          zIndex: 2, 
+          maxWidth: '900px',
+          textAlign: 'center',
+          padding: '0 2rem'
+        }}>
+          <h1 style={{ 
+            fontSize: '3.5rem', 
+            fontWeight: '800', 
+            marginBottom: '1.5rem',
+            textShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            letterSpacing: '-2px',
+            lineHeight: '1.1',
+            color: 'white'
+          }}>
+            Book Now
+          </h1>
+          {packageDetails?.title && (
+            <p style={{ 
+              fontSize: '1.75rem', 
+              color: 'white',
+              maxWidth: '700px',
+              margin: '0 auto 1.5rem auto',
+              letterSpacing: '3px',
+              lineHeight: '1.6',
+              textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              fontWeight: '300'
+            }}>
+              {packageDetails.title}
+            </p>
+          )}
+          {packageDetails?.overview && (
+            <p style={{ 
+              fontSize: '1.125rem', 
+              color: 'rgba(255, 255, 255, 0.9)',
+              maxWidth: '800px',
+              margin: '0 auto',
+              lineHeight: '1.8',
+              textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              fontWeight: '400'
+            }}>
+              {packageDetails.overview}
+            </p>
+          )}
+          {!packageDetails?.overview && (
+            <p style={{ 
+              fontSize: '1.125rem', 
+              color: 'rgba(255, 255, 255, 0.9)',
+              maxWidth: '800px',
+              margin: '0 auto',
+              lineHeight: '1.8',
+              textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              fontWeight: '400'
+            }}>
+              Secure your spot for an unforgettable adventure. Complete your booking details and get ready to explore amazing destinations with verified travel companions.
+            </p>
+          )}
         </div>
       </section>
 
@@ -501,28 +652,39 @@ export default function BookNowPage() {
             <Grid size={{ xs: 12, md: 8 }}>
               {/* Slot Selection */}
               <div className="packages-detail-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                  <h2 className="packages-section-title" style={{ margin: 0 }}>Select a Slot</h2>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  marginBottom: '2rem', 
+                  flexWrap: 'wrap', 
+                  gap: '1rem',
+                  paddingBottom: '1.5rem',
+                  borderBottom: '1px solid #e5e7eb'
+                }}>
+                  <h2 className="packages-section-title" style={{ margin: 0, fontSize: '1.75rem', fontWeight: '700' }}>Select</h2>
                   
                   {/* Per Person Pricing - Compact Design */}
                   {packageDetails?.price && (
                     <div style={{ 
                       display: 'flex', 
                       gap: '0.75rem',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      flexWrap: 'wrap'
                     }}>
                       {packageDetails.price.adult !== undefined && packageDetails.price.adult > 0 && (
                         <div style={{ 
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          padding: '0.5rem 0.75rem',
+                          padding: '0.625rem 1rem',
                           backgroundColor: '#1D4ED8',
-                          borderRadius: '6px',
-                          border: '1px solid #1D4ED8'
+                          borderRadius: '8px',
+                          border: '1px solid #1D4ED8',
+                          boxShadow: '0 2px 4px rgba(29, 78, 216, 0.2)'
                         }}>
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '500' }}>Adult:</span>
-                          <span style={{ fontSize: '0.875rem', color: '#ffffff', fontWeight: '700' }}>₹{packageDetails.price.adult.toLocaleString()}</span>
+                          <span style={{ fontSize: '0.8125rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: '600' }}>Adult:</span>
+                          <span style={{ fontSize: '0.9375rem', color: '#ffffff', fontWeight: '700' }}>₹{packageDetails.price.adult.toLocaleString()}</span>
                         </div>
                       )}
                       {packageDetails.price.child !== undefined && packageDetails.price.child > 0 && (
@@ -530,13 +692,14 @@ export default function BookNowPage() {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.5rem',
-                          padding: '0.5rem 0.75rem',
+                          padding: '0.625rem 1rem',
                           backgroundColor: '#1D4ED8',
-                          borderRadius: '6px',
-                          border: '1px solid #1D4ED8'
+                          borderRadius: '8px',
+                          border: '1px solid #1D4ED8',
+                          boxShadow: '0 2px 4px rgba(29, 78, 216, 0.2)'
                         }}>
-                          <span style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.9)', fontWeight: '500' }}>Child:</span>
-                          <span style={{ fontSize: '0.875rem', color: '#ffffff', fontWeight: '700' }}>₹{packageDetails.price.child.toLocaleString()}</span>
+                          <span style={{ fontSize: '0.8125rem', color: 'rgba(255, 255, 255, 0.95)', fontWeight: '600' }}>Child:</span>
+                          <span style={{ fontSize: '0.9375rem', color: '#ffffff', fontWeight: '700' }}>₹{packageDetails.price.child.toLocaleString()}</span>
                         </div>
                       )}
                     </div>
@@ -548,23 +711,29 @@ export default function BookNowPage() {
                   <h3 className="packages-slot-subtitle">
                     Select Date - {selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                   </h3>
-                  <div className="packages-dates-grid">
-                    {availableDates.map((date, index) => {
-                      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-                      const dayNumber = date.getDate();
-                      const isSelected = selectedDate && new Date(selectedDate).toDateString() === date.toDateString();
-                      return (
-                        <button
-                          key={index}
-                          className={`packages-date-btn ${isSelected ? 'active' : ''}`}
-                          onClick={() => setSelectedDate(date.toISOString())}
-                        >
-                          <span className="packages-date-day">{dayName}</span>
-                          <span className="packages-date-number">{dayNumber}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {availableDates.length > 0 ? (
+                    <div className="packages-dates-grid">
+                      {availableDates.map((date, index) => {
+                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+                        const dayNumber = date.getDate();
+                        const isSelected = selectedDate && new Date(selectedDate).toDateString() === date.toDateString();
+                        return (
+                          <button
+                            key={index}
+                            className={`packages-date-btn ${isSelected ? 'active' : ''}`}
+                            onClick={() => setSelectedDate(date.toISOString())}
+                          >
+                            <span className="packages-date-day">{dayName}</span>
+                            <span className="packages-date-number">{dayNumber}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="packages-slot-message">
+                      <p>No available slots for this package. Please check back later or contact support.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -759,7 +928,7 @@ export default function BookNowPage() {
               {/* Show message if slot not selected */}
               {!selectedDate && (
                 <div className="packages-slot-message">
-                  <p>Please select a date to continue with guest details.</p>
+                  <p>Select</p>
                 </div>
               )}
             </Grid>

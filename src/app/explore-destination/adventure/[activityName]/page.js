@@ -8,7 +8,8 @@ import { API_BASE_URL } from '@/lib/config';
 export default function AdventureDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const activityName = params.activityName;
+  // Decode URL-encoded characters (e.g., %26 becomes &)
+  const activityName = params.activityName ? decodeURIComponent(params.activityName) : '';
   
   const [activityData, setActivityData] = useState(null);
   const [destinations, setDestinations] = useState([]);
@@ -24,33 +25,62 @@ export default function AdventureDetailPage() {
         const activitiesData = await activitiesRes.json();
         
         if (activitiesData.status && activitiesData.data) {
-          const activityNameFormatted = activityName.replace(/-/g, ' ').toLowerCase();
+          const activityNameFormatted = activityName.replace(/-/g, ' ').toLowerCase().trim();
           const matchedActivity = activitiesData.data.find(a => {
-            const activityNameLower = (a.name || a.title || '').toLowerCase();
-            return activityNameLower === activityNameFormatted;
+            const activityNameLower = (a.name || a.title || '').toLowerCase().trim();
+            // Try exact match first
+            if (activityNameLower === activityNameFormatted) return true;
+            // Try matching by replacing special characters and spaces
+            const normalizedUrl = activityNameLower.replace(/[&\s]+/g, ' ').replace(/\s+/g, ' ').trim();
+            const normalizedFormatted = activityNameFormatted.replace(/[&\s]+/g, ' ').replace(/\s+/g, ' ').trim();
+            return normalizedUrl === normalizedFormatted;
           });
 
           if (matchedActivity) {
             setActivityData(matchedActivity);
             
-            // Try to fetch destinations for this activity
-            try {
-              const destRes = await fetch(`${API_BASE_URL}/api/admin/destination/adventure/${matchedActivity._id}/destinations`);
-              const destData = await destRes.json();
-              
-              if (destData.status && destData.data) {
-                setDestinations(destData.data.destinations || destData.data || []);
-              } else if (matchedActivity.destinations && Array.isArray(matchedActivity.destinations)) {
-                setDestinations(matchedActivity.destinations);
-              } else {
-                // Use dummy data
-                setDestinations(getDummyAdventureDestinations(activityNameFormatted));
-              }
-            } catch (error) {
-              console.error('Error fetching destinations:', error);
-              if (matchedActivity.destinations && Array.isArray(matchedActivity.destinations)) {
-                setDestinations(matchedActivity.destinations);
-              } else {
+            // Check if placesDetails exists (similar to regions)
+            if (matchedActivity.placesDetails && Array.isArray(matchedActivity.placesDetails) && matchedActivity.placesDetails.length > 0) {
+              // Convert placesDetails to destinations format
+              const formattedDestinations = matchedActivity.placesDetails.map((place, index) => {
+                // Create composite ID: activityId-placeName-index (same format as regions)
+                // Use original placeName with spaces (Next.js will URL-encode automatically)
+                const placeNameRaw = place.placeName || place.name || 'destination';
+                const compositeId = place._id || place.id || `${matchedActivity._id}-${placeNameRaw}-${index}`;
+                return {
+                  _id: compositeId,
+                  id: compositeId,
+                  name: place.placeName || place.name || 'Destination',
+                  location: place.location || `${place.placeName || place.name}`,
+                  rating: place.rating || 4.5,
+                  description: place.description || '',
+                  image: place.images?.[0] || place.image || '/explore-destination/default.png',
+                  images: place.images || (place.image ? [place.image] : [])
+                };
+              });
+              setDestinations(formattedDestinations);
+            } else if (matchedActivity.destinations && Array.isArray(matchedActivity.destinations)) {
+              setDestinations(matchedActivity.destinations);
+            } else {
+              // Try to fetch destinations for this activity (only if placesDetails not available)
+              try {
+                const destRes = await fetch(`${API_BASE_URL}/api/admin/destination/adventure/${matchedActivity._id}/destinations`);
+                
+                // Check if response is ok and content-type is JSON
+                if (destRes.ok && destRes.headers.get('content-type')?.includes('application/json')) {
+                  const destData = await destRes.json();
+                  
+                  if (destData.status && destData.data) {
+                    setDestinations(destData.data.destinations || destData.data || []);
+                  } else {
+                    setDestinations(getDummyAdventureDestinations(activityNameFormatted));
+                  }
+                } else {
+                  // Response is not JSON (probably HTML error page)
+                  setDestinations(getDummyAdventureDestinations(activityNameFormatted));
+                }
+              } catch (error) {
+                console.error('Error fetching destinations:', error);
                 setDestinations(getDummyAdventureDestinations(activityNameFormatted));
               }
             }
@@ -115,6 +145,15 @@ export default function AdventureDetailPage() {
   };
 
   const handleDestinationClick = (destinationId) => {
+    if (!destinationId) {
+      console.error('Destination ID is missing');
+      return;
+    }
+    // Skip navigation for dummy IDs (like 'adv1', 'adv2', etc.)
+    if (String(destinationId).match(/^(adv|her)\d+$/)) {
+      console.warn('Cannot navigate to dummy destination ID:', destinationId);
+      return;
+    }
     router.push(`/explore-destination/${destinationId}`);
   };
 

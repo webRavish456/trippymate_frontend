@@ -149,19 +149,54 @@ export default function ExploreDesignation() {
         }
         setLoading(prev => ({ ...prev, categories: false }));
 
-        // Fetch Region data
+        // Fetch Region data - Only show 4 main regions: North, South, East, West
         const regionRes = await fetch(`${API_BASE_URL}/api/admin/destination/region`);
         const regionData = await regionRes.json();
         if (regionData.status && regionData.data) {
-          const formattedRegions = regionData.data
-            .filter(item => item.status === 'active')
-            .map(item => ({
-              id: item._id,
-              name: item.region || item.name || '',
-              image: item.image || '/explore-destination/region/default.png',
-              description: item.desc || item.description || '',
-              states: item.states || []
-            }));
+          // Filter to only get North, South, East, West regions
+          const mainRegions = ['north', 'south', 'east', 'west'];
+          const regionMap = new Map(); // Use Map to store unique regions
+          
+          regionData.data
+            .filter(item => {
+              if (item.status !== 'active') return false;
+              const regionName = (item.region || item.name || '').toLowerCase();
+              // Check if region name contains any of the main region names
+              return mainRegions.some(mainRegion => regionName.includes(mainRegion));
+            })
+            .forEach(item => {
+              const regionName = (item.region || item.name || '').toLowerCase();
+              let normalizedName = '';
+              if (regionName.includes('north')) normalizedName = 'North India';
+              else if (regionName.includes('south')) normalizedName = 'South India';
+              else if (regionName.includes('east')) normalizedName = 'East India';
+              else if (regionName.includes('west')) normalizedName = 'West India';
+              else normalizedName = item.region || item.name || '';
+              
+              // Only add if this normalized region name doesn't exist in map
+              // This ensures we only have one entry per region
+              if (!regionMap.has(normalizedName)) {
+                regionMap.set(normalizedName, {
+                  id: item._id, // Use first document's ID
+                  name: normalizedName,
+                  image: item.image || '/explore-destination/region/default.png',
+                  description: item.desc || item.description || '',
+                  states: item.states || []
+                });
+              }
+            });
+          
+          // Convert Map to Array
+          const formattedRegions = Array.from(regionMap.values());
+          
+          // Sort regions in order: North, South, East, West
+          const regionOrder = { 'north india': 0, 'south india': 1, 'east india': 2, 'west india': 3 };
+          formattedRegions.sort((a, b) => {
+            const aOrder = regionOrder[a.name.toLowerCase()] ?? 99;
+            const bOrder = regionOrder[b.name.toLowerCase()] ?? 99;
+            return aOrder - bOrder;
+          });
+          
           setRegions(formattedRegions);
         }
         setLoading(prev => ({ ...prev, regions: false }));
@@ -881,9 +916,13 @@ export default function ExploreDesignation() {
                     <div className="region-divider"></div>
                     <p className="region-description">{r.description || "Explore destinations"}</p>
                     <button 
+                      type="button"
                       className="region-explore-btn"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         const regionName = (r.name || '').toLowerCase().replace(/\s+/g, '-');
+                        console.log('Navigating to region:', regionName);
                         router.push(`/explore-destination/region/${regionName}`);
                       }}
                     >

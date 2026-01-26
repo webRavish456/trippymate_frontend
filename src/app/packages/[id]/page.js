@@ -98,6 +98,8 @@ export default function PackageDetailPage() {
 
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [slots, setSlots] = useState([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [showEnquireModal, setShowEnquireModal] = useState(false);
   const [enquireForm, setEnquireForm] = useState({
@@ -107,14 +109,20 @@ export default function PackageDetailPage() {
     message: ''
   });
   
-  // Dummy: User has joined slot 1
-  const joinedSlots = ['1'];
+  // User joined slots - will be fetched from API
+  const [joinedSlots] = useState([]);
 
   useEffect(() => {
     if (packageId) {
       fetchPackageDetails();
     }
   }, [packageId]);
+
+  useEffect(() => {
+    if (selectedPackage && selectedPackage._id) {
+      fetchSlots();
+    }
+  }, [selectedPackage]);
 
   const fetchPackageDetails = async () => {
     try {
@@ -133,15 +141,69 @@ export default function PackageDetailPage() {
         setSelectedPackage(data.data);
       } else {
         console.error('Failed to fetch package:', data.message);
-        // Use static data as fallback instead of redirecting
-        setSelectedPackage(staticPackageData);
+        setSelectedPackage(null);
       }
     } catch (error) {
       console.error('Error fetching package:', error);
-      // Use static data as fallback instead of redirecting
-      setSelectedPackage(staticPackageData);
+      setSelectedPackage(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSlots = async () => {
+    if (!selectedPackage || !selectedPackage._id) return;
+    
+    try {
+      setSlotsLoading(true);
+      // Fetch slots for this package
+      // Since getAllSlots is admin route, we'll try to get slots from package data if available
+      // Or use available slots endpoint with future dates
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Try to fetch slots - we'll need packageId and destinationId
+      // For now, let's try to get slots if package has destination info
+      if (selectedPackage.destinationId || selectedPackage.destinations?.[0]?._id) {
+        const destinationId = selectedPackage.destinationId || selectedPackage.destinations?.[0]?._id;
+        
+        // Get slots for next 60 days
+        const today = new Date();
+        const futureDate = new Date();
+        futureDate.setDate(today.getDate() + 60);
+        
+        // Try user endpoint first (might not work without all params, so we'll handle error)
+        try {
+          const slotsResponse = await fetch(
+            `${API_BASE_URL}/api/user/slot/available?packageId=${selectedPackage._id}&destinationId=${destinationId}&tripDate=${today.toISOString().split('T')[0]}`,
+            { headers }
+          );
+          
+          if (slotsResponse.ok) {
+            const slotsData = await slotsResponse.json();
+            if (slotsData.status && slotsData.data) {
+              setSlots(slotsData.data || []);
+              setSlotsLoading(false);
+              return;
+            }
+          }
+        } catch (error) {
+          console.log('Could not fetch slots from available endpoint:', error);
+        }
+      }
+      
+      // If no slots found, set empty array
+      setSlots([]);
+    } catch (error) {
+      console.error('Error fetching slots:', error);
+      setSlots([]);
+    } finally {
+      setSlotsLoading(false);
     }
   };
 
@@ -196,48 +258,6 @@ export default function PackageDetailPage() {
     );
   }
 
-  // Static slots data
-  const staticSlots = [
-    {
-      _id: '1',
-      slotName: 'Slot 1 - Early Bird',
-      tripDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      maxSlots: 10,
-      availableSlots: 7,
-      status: 'available',
-      destinationName: selectedPackage.destination || 'Destination',
-      createdBy: {
-        name: 'Rahul Sharma',
-        avatar: 'https://i.pravatar.cc/150?img=12'
-      }
-    },
-    {
-      _id: '2',
-      slotName: 'Slot 2 - Weekend Special',
-      tripDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-      maxSlots: 12,
-      availableSlots: 5,
-      status: 'available',
-      destinationName: selectedPackage.destination || 'Destination',
-      createdBy: {
-        name: 'Priya Patel',
-        avatar: 'https://i.pravatar.cc/150?img=47'
-      }
-    },
-    {
-      _id: '3',
-      slotName: 'Slot 3 - Holiday Package',
-      tripDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-      maxSlots: 15,
-      availableSlots: 0,
-      status: 'full',
-      destinationName: selectedPackage.destination || 'Destination',
-      createdBy: {
-        name: 'Amit Kumar',
-        avatar: 'https://i.pravatar.cc/150?img=33'
-      }
-    }
-  ];
 
   return (
     <div className="packages-page">
@@ -343,7 +363,7 @@ export default function PackageDetailPage() {
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          marginBottom: '3rem'
+          marginBottom: (!slotsLoading && slots.length > 0) ? '0' : '0'
         }}>
           {/* Background Image */}
           <div style={{
@@ -455,87 +475,81 @@ export default function PackageDetailPage() {
         </div>
       </section>
 
-      {/* Available Slots Section */}
-      <section className="packages-slots-section">
-        <div className="packages-slots-container">
-          <h2 className="packages-section-title">Available Slots</h2>
-          <div className="packages-slots-grid">
-            {staticSlots.map((slot) => {
-              const isJoined = joinedSlots.includes(slot._id);
-              return (
-              <div 
-                key={slot._id} 
-                className="packages-slot-card packages-slot-card-clickable"
-                onClick={() => handleSlotClick(slot)}
-              >
-                <div className="packages-slot-header">
-                  <h3 className="packages-slot-name">{slot.slotName}</h3>
-                  <div className="packages-slot-status-group">
-                    {isJoined && (
-                      <span className="packages-slot-status packages-slot-status-added">
-                        Added
+      {/* Available Slots Section - Only show if slots are available */}
+      {!slotsLoading && slots.length > 0 && (
+        <section className="packages-slots-section">
+          <div className="packages-slots-container">
+            <h2 className="packages-section-title">Available Slots</h2>
+            <div className="packages-slots-grid">
+              {slots.map((slot) => {
+                const isJoined = joinedSlots.includes(slot._id);
+                return (
+                <div 
+                  key={slot._id} 
+                  className="packages-slot-card packages-slot-card-clickable"
+                  onClick={() => handleSlotClick(slot)}
+                >
+                  <div className="packages-slot-header">
+                    <h3 className="packages-slot-name">{slot.slotName || 'Unnamed Slot'}</h3>
+                    <div className="packages-slot-status-group">
+                      {isJoined && (
+                        <span className="packages-slot-status packages-slot-status-added">
+                          Added
+                        </span>
+                      )}
+                      <span className={`packages-slot-status packages-slot-status-${slot.status || 'available'}`}>
+                        {slot.status === 'available' ? 'Available' : slot.status === 'full' ? 'Full' : 'Closed'}
                       </span>
+                    </div>
+                  </div>
+                  <div className="packages-slot-details">
+                    <div className="packages-slot-detail-item">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" fill="currentColor"/>
+                      </svg>
+                      <span>Trip Date: {slot.tripDate ? new Date(slot.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'TBD'}</span>
+                    </div>
+                    <div className="packages-slot-detail-item">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
+                      </svg>
+                      <span>Available: {slot.availableSlots || 0} / {slot.maxSlots || 0}</span>
+                    </div>
+                    {slot.destinationName && (
+                      <div className="packages-slot-detail-item">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                        </svg>
+                        <span>{slot.destinationName}</span>
+                      </div>
                     )}
-                    <span className={`packages-slot-status packages-slot-status-${slot.status}`}>
-                      {slot.status === 'available' ? 'Available' : slot.status === 'full' ? 'Full' : 'Closed'}
-                    </span>
                   </div>
+                  {slot.status === 'available' && !isJoined && (
+                    <button 
+                      className="packages-join-slot-btn"
+                      onClick={(e) => handleJoinSlot(slot, e)}
+                    >
+                      Join Slot
+                    </button>
+                  )}
+                  {isJoined && (
+                    <button 
+                      className="packages-view-slot-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSlotClick(slot);
+                      }}
+                    >
+                      View Details
+                    </button>
+                  )}
                 </div>
-                {slot.createdBy && (
-                  <div className="packages-slot-creator">
-                    <img 
-                      src={slot.createdBy.avatar} 
-                      alt={slot.createdBy.name}
-                      className="packages-slot-creator-avatar"
-                    />
-                    <span className="packages-slot-creator-name">{slot.createdBy.name}</span>
-                  </div>
-                )}
-                <div className="packages-slot-details">
-                  <div className="packages-slot-detail-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" fill="currentColor"/>
-                    </svg>
-                    <span>Trip Date: {new Date(slot.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  </div>
-                  <div className="packages-slot-detail-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
-                    </svg>
-                    <span>Available: {slot.availableSlots} / {slot.maxSlots}</span>
-                  </div>
-                  <div className="packages-slot-detail-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
-                    </svg>
-                    <span>{slot.destinationName}</span>
-                  </div>
-                </div>
-                {slot.status === 'available' && !isJoined && (
-                  <button 
-                    className="packages-join-slot-btn"
-                    onClick={(e) => handleJoinSlot(slot, e)}
-                  >
-                    Join Slot
-                  </button>
-                )}
-                {isJoined && (
-                  <button 
-                    className="packages-view-slot-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSlotClick(slot);
-                    }}
-                  >
-                    View Details
-                  </button>
-                )}
-              </div>
-            );
-            })}
+              );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Package Details */}
       <section className="packages-details-section">
@@ -572,12 +586,16 @@ export default function PackageDetailPage() {
                       <div key={index} className="packages-itinerary-day">
                         <div className="packages-itinerary-day-header">
                           <span className="packages-day-badge">Day {day.day}</span>
-                          <h3 className="packages-day-title">{day.title}</h3>
+                          <div style={{ flex: 1 }}>
+                            <h3 className="packages-day-title">{day.title}</h3>
+                            {day.description && (
+                              <p className="packages-day-description" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>{day.description}</p>
+                            )}
+                          </div>
                         </div>
-                        <p className="packages-day-description">{day.description}</p>
                         {day.activities && day.activities.length > 0 && (
                           <div className="packages-day-activities">
-                            <strong>Activities:</strong>
+                            <strong style={{ display: 'block', marginBottom: '0.75rem', fontSize: '0.9375rem', color: '#374151' }}>Activities:</strong>
                             <div className="packages-activities-tags">
                               {day.activities.map((activity, actIndex) => (
                                 <span key={actIndex} className="packages-activity-tag">{activity}</span>
@@ -636,7 +654,7 @@ export default function PackageDetailPage() {
 
               {/* Inclusions & Exclusions */}
               <div className="packages-detail-card">
-                <Grid container spacing={3}>
+                <Grid container spacing={6}>
                   <Grid size={{ xs: 12, md: 6 }}>
                     <h3 className="packages-subsection-title" style={{ marginBottom: '1.5rem' }}>Inclusions</h3>
                     <ul className="packages-inclusions-list">
@@ -767,12 +785,9 @@ export default function PackageDetailPage() {
 
             {/* Right Column - Booking Summary */}
             <Grid size={{ xs: 12, md: 4 }}>
-              <div className="packages-booking-card" style={{
-                position: 'sticky',
-                top: '90px',
-                alignSelf: 'flex-start'
-              }}>
-                <h2 className="packages-booking-title">Booking Summary</h2>
+              <div className="packages-sticky-sidebar">
+                <div className="packages-booking-card">
+                  <h2 className="packages-booking-title">Booking Summary</h2>
                 
                 {/* Price Section */}
                 <div className="packages-price-section">
@@ -795,6 +810,7 @@ export default function PackageDetailPage() {
                 <div className="packages-booking-buttons">
                   <button className="packages-enquiry-btn" onClick={handleEnquireNow}>Enquire Now</button>
                   <button className="packages-book-btn" onClick={handleBookNow}>Book Now</button>
+                </div>
                 </div>
               </div>
             </Grid>
