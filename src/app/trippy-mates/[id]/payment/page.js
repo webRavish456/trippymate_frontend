@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Container, Grid } from '@mui/material';
-import KeyboardBackspaceIcon from '@mui/icons-material/KeyboardBackspace';
+import { Container, Grid, Skeleton } from '@mui/material';
 
 import { API_BASE_URL } from '@/lib/config';
 
@@ -24,6 +23,41 @@ export default function CaptainPaymentPage() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState(false);
   const [couponError, setCouponError] = useState('');
+  const [unavailableDatesError, setUnavailableDatesError] = useState(null);
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  const waitForRazorpay = () => {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        resolve(window.Razorpay);
+      } else {
+        const checkInterval = setInterval(() => {
+          if (typeof window !== 'undefined' && window.Razorpay) {
+            clearInterval(checkInterval);
+            resolve(window.Razorpay);
+          }
+        }, 100);
+        
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve(null);
+        }, 10000);
+      }
+    });
+  };
 
   useEffect(() => {
     // Scroll to top when page loads
@@ -146,52 +180,159 @@ export default function CaptainPaymentPage() {
     try {
       setProcessing(true);
 
-      // Create booking first
+      // Get userId from token if available
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login to proceed with booking');
+        router.push('/auth/login');
+        setProcessing(false);
+        return;
+      }
+
+      let userId = null;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.id || payload.userId || payload._id;
+      } catch (e) {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userId = userData._id || userData.id;
+      }
+
+      if (!userId) {
+        alert('User information not found. Please login again.');
+        router.push('/auth/login');
+        setProcessing(false);
+        return;
+      }
+
       const startDate = new Date(bookingData.startDate);
       const endDate = new Date(bookingData.endDate);
       const numberOfDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      const finalAmount = calculateFinalAmount();
 
-      const bookingResponse = await fetch(`${API_BASE_URL}/api/user/captain/book`, {
+      // Create Razorpay order
+      const orderResponse = await fetch(`${API_BASE_URL}/api/payment/captain/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           captainId: bookingData.captainId,
+          userId: userId,
           startDate: bookingData.startDate,
           endDate: bookingData.endDate,
-          destination: bookingData.destination,
-          customerName: bookingData.customerName,
-          customerEmail: bookingData.customerEmail,
-          customerPhone: bookingData.customerPhone,
-          numberOfDays: numberOfDays,
-          specialRequirements: bookingData.specialRequirements,
-          amount: calculateFinalAmount(),
-          promoCode: promoApplied ? promoCode : null,
-          couponCode: couponApplied ? couponCode : null
+          amount: finalAmount,
+          couponCode: couponApplied ? couponCode : null,
+          promoCode: promoApplied ? promoCode : null
         })
       });
 
-      const bookingResult = await bookingResponse.json();
+      const orderData = await orderResponse.json();
 
-      if (bookingResult.status) {
-        // For demo: directly redirect to success page
-        // In production, integrate with Razorpay here
-        const mockPaymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const mockOrderId = bookingResult.data?.bookingReference || `order_${Date.now()}`;
-        
-        // Store booking reference
-        sessionStorage.setItem('captainBookingReference', bookingResult.data?.bookingReference || '');
-        
-        // Redirect to success page
-        router.push(`/trippy-mates/${captainId}/payment/success?payment_id=${mockPaymentId}&order_id=${mockOrderId}`);
-      } else {
-        alert(bookingResult.message || 'Failed to process booking');
+      if (!orderData.status) {
+        setUnavailableDatesError({
+          message: orderData.message || 'Failed to create payment order',
+          unavailableDates: []
+        });
         setProcessing(false);
+        return;
       }
+
+      // Initialize Razorpay
+      const Razorpay = await waitForRazorpay();
+      if (!Razorpay) {
+        alert('Payment gateway not available. Please refresh the page.');
+        setProcessing(false);
+        return;
+      }
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+
+      const options = {
+        key: orderData.data.keyId,
+        amount: orderData.data.amount,
+        currency: orderData.data.currency,
+        order_id: orderData.data.orderId,
+        name: 'Trippy Mates',
+        description: `Booking for Captain ${captain.name}`,
+        prefill: {
+          name: bookingData.customerName,
+          contact: bookingData.customerPhone,
+          email: bookingData.customerEmail || userData.email || ''
+        },
+        theme: {
+          color: '#1D4ED8'
+        },
+        handler: async function (response) {
+          try {
+            // Verify payment and create booking
+            const verifyResponse = await fetch(`${API_BASE_URL}/api/payment/captain/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                captainId: bookingData.captainId,
+                userId: userId,
+                startDate: bookingData.startDate,
+                endDate: bookingData.endDate,
+                destination: bookingData.destination,
+                customerName: bookingData.customerName,
+                customerEmail: bookingData.customerEmail,
+                customerPhone: bookingData.customerPhone,
+                numberOfDays: numberOfDays,
+                specialRequirements: bookingData.specialRequirements,
+                amount: finalAmount,
+                promoCode: promoApplied ? promoCode : null,
+                couponCode: couponApplied ? couponCode : null
+              })
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            if (verifyData.status) {
+              // Store booking reference
+              if (verifyData.data?.booking?.bookingReference) {
+                sessionStorage.setItem('captainBookingReference', verifyData.data.booking.bookingReference);
+              }
+              
+              // Redirect to success page
+              router.push(`/trippy-mates/${captainId}/payment/success?payment_id=${response.razorpay_payment_id}&order_id=${response.razorpay_order_id}`);
+            } else {
+              alert(verifyData.message || 'Payment verification failed');
+              setProcessing(false);
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            alert('Error verifying payment. Please contact support.');
+            setProcessing(false);
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setProcessing(false);
+          }
+        }
+      };
+
+      const razorpayInstance = new Razorpay(options);
+      razorpayInstance.on('payment.failed', function (response) {
+        alert(`Payment failed: ${response.error.description || 'Unknown error'}`);
+        setProcessing(false);
+      });
+
+      razorpayInstance.open();
     } catch (error) {
       console.error('Error processing payment:', error);
-      alert('An error occurred. Please try again.');
+      setUnavailableDatesError({
+        message: 'An error occurred. Please try again.',
+        unavailableDates: []
+      });
       setProcessing(false);
     }
   };
@@ -199,9 +340,105 @@ export default function CaptainPaymentPage() {
   if (loading || !bookingData || !captain) {
     return (
       <div className="trippy-mates-page">
-        <div className="text-center py-20">
-          <p className="text-gray-600">Loading payment details...</p>
-        </div>
+        {/* Banner Skeleton */}
+        <section className="trippy-mates-payment-banner">
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height="100%"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: '#e2e8f0',
+            }}
+            animation="wave"
+          />
+        </section>
+
+        {/* Content Skeleton */}
+        <section className="trippy-mates-payment-section">
+          <Container maxWidth="lg">
+            <Grid container spacing={4}>
+              {/* Left Column Skeleton - md-8 */}
+              <Grid size={{xs: 12, md: 8}}>
+                {/* Captain Card Skeleton */}
+                <div className="trippy-mates-payment-captain-card">
+                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                    <Skeleton
+                      variant="circular"
+                      width={100}
+                      height={100}
+                      sx={{ bgcolor: '#e2e8f0' }}
+                      animation="wave"
+                    />
+                    <div style={{ flex: 1 }}>
+                      <Skeleton variant="text" width="50%" height={32} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="70%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="40%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Details Card Skeleton */}
+                <div className="trippy-mates-payment-details-card">
+                  <Skeleton variant="text" width="40%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                    {[...new Array(6)].map((_, idx) => (
+                      <div key={idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                        <div style={{ flex: 1 }}>
+                          <Skeleton variant="text" width="60%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                          <Skeleton variant="text" width="80%" height={16} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Grid>
+
+              {/* Right Column Skeleton - md-4 */}
+              <Grid size={{xs: 12, md: 4}}>
+                <div className="trippy-mates-payment-summary-card">
+                  <Skeleton variant="text" width="60%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+                  
+                  {/* Promo Code Skeleton */}
+                  <Skeleton variant="text" width="40%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <div style={{ display: 'flex', gap: '0.5rem', mb: 2 }}>
+                    <Skeleton variant="rectangular" width="70%" height={40} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="rectangular" width="30%" height={40} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
+
+                  {/* Coupon Code Skeleton */}
+                  <Skeleton variant="text" width="40%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <div style={{ display: 'flex', gap: '0.5rem', mb: 3 }}>
+                    <Skeleton variant="rectangular" width="70%" height={40} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="rectangular" width="30%" height={40} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
+
+                  {/* Price Summary Skeleton */}
+                  <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width="100%" height={20} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+                  
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={48}
+                    sx={{
+                      borderRadius: '0.75rem',
+                      bgcolor: '#e2e8f0',
+                    }}
+                    animation="wave"
+                  />
+                </div>
+              </Grid>
+            </Grid>
+          </Container>
+        </section>
       </div>
     );
   }
@@ -211,28 +448,108 @@ export default function CaptainPaymentPage() {
 
   return (
     <div className="trippy-mates-page">
+      {/* Banner Section with Static Data */}
+      <section className="trippy-mates-payment-banner">
+        <div 
+          className="trippy-mates-payment-banner-bg"
+          style={{backgroundImage: `url(${captain.backgroundImage})`}}
+        >
+          <div className="trippy-mates-payment-banner-overlay"></div>
+        </div>
+        <div className="trippy-mates-payment-banner-content">
+          <h1 className="trippy-mates-payment-banner-title">COMPLETE YOUR BOOKING</h1>
+          <p className="trippy-mates-payment-banner-subtitle">Secure . Fast . Reliable</p>
+          <p className="trippy-mates-payment-banner-description">
+            Review your booking details and proceed to secure payment. Your journey with your local captain is just one step away.
+          </p>
+        </div>
+      </section>
+
       <section className="trippy-mates-payment-section">
-      
-          <div className="trippy-mates-payment-container">
-            <div className="trippy-mates-payment-header">
-              <button 
-                onClick={() => router.back()}
-                className="trippy-mates-payment-back-icon"
-              >
-                <KeyboardBackspaceIcon />
-              </button>
-              <div>
-                <h1 className="trippy-mates-payment-title">Complete Your Booking</h1>
-                <p className="trippy-mates-payment-subtitle">Review your booking details and proceed to payment</p>
+        <div className="trippy-mates-payment-container">
+            {/* Unavailable Dates Error Message */}
+            {unavailableDatesError && (
+              <div className="trippy-mates-payment-error-banner" style={{
+                backgroundColor: '#fef2f2',
+                border: '2px solid #dc2626',
+                borderRadius: '0.75rem',
+                padding: '1.5rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                  </svg>
+                  <h3 style={{ margin: 0, color: '#dc2626', fontSize: '1.125rem', fontWeight: '600' }}>
+                    {unavailableDatesError.message}
+                  </h3>
+                </div>
+                {unavailableDatesError.unavailableDates && unavailableDatesError.unavailableDates.length > 0 && (
+                  <div>
+                    <p style={{ margin: '0.5rem 0', color: '#7f1d1d', fontWeight: '500' }}>
+                      Unavailable Dates:
+                    </p>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: '0.5rem',
+                      marginTop: '0.5rem'
+                    }}>
+                      {unavailableDatesError.unavailableDates.map((date, idx) => (
+                        <span 
+                          key={idx}
+                          style={{
+                            backgroundColor: '#fee2e2',
+                            color: '#991b1b',
+                            padding: '0.5rem 1rem',
+                            borderRadius: '0.5rem',
+                            fontSize: '0.875rem',
+                            fontWeight: '500',
+                            border: '1px solid #fecaca'
+                          }}
+                        >
+                          {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setUnavailableDatesError(null);
+                    router.push(`/trippy-mates/${captainId}`);
+                  }}
+                  style={{
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    alignSelf: 'flex-start',
+                    marginTop: '0.5rem'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#b91c1c'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#dc2626'}
+                >
+                  Go Back to Change Dates
+                </button>
               </div>
-            </div>
+            )}
 
             <Grid container spacing={4}>
               <Grid size={{xs: 12, md: 8}}>
                 {/* Captain Info Card */}
                 <div className="trippy-mates-payment-captain-card">
-                  <div className="trippy-mates-payment-captain-image">
-                    <img src={captain.image} alt={captain.name} />
+                  <div className="trippy-mates-payment-captain-image-wrapper">
+                    <div className="trippy-mates-payment-captain-image">
+                      <img src={captain.image} alt={captain.name} />
+                    </div>
                     {captain.verified && (
                       <div className="trippy-mates-payment-verified-badge">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -311,9 +628,10 @@ export default function CaptainPaymentPage() {
 
                     <div className="trippy-mates-payment-info-item">
                       <div className="trippy-mates-payment-info-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.24 2.34 2.03 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
-                        </svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm12 7H5v10h14V9zM8 11h3v3H8v-3z" fill="currentColor"/>
+</svg>
+
                       </div>
                       <div className="trippy-mates-payment-info-content">
                         <strong>Number of Days</strong>
@@ -382,9 +700,10 @@ export default function CaptainPaymentPage() {
               <Grid size={{xs: 12, md: 4}}>
                 <div className="trippy-mates-payment-summary-card">
                   <h3 className="trippy-mates-payment-card-title">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.24 2.34 2.03 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" fill="currentColor"/>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7 5h10v2H13.5c.9.6 1.5 1.6 1.7 3H17v2h-1.8c-.3 2.5-2.2 4-4.9 4H9.5l4.5 5H11l-5-5v-2h4.1c1.6 0 2.6-.8 2.9-2H7v-2h5.8c-.4-1.3-1.5-2-3.1-2H7V5z" fill="currentColor"/>
                     </svg>
+
                     Payment Summary
                   </h3>
                   
@@ -486,9 +805,7 @@ export default function CaptainPaymentPage() {
                         </>
                       ) : (
                         <>
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                         
                           Pay ₹{finalAmount.toLocaleString('en-IN')}
                         </>
                       )}

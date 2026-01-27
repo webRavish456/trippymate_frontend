@@ -13,16 +13,17 @@ export default function LayoutWrapper({ children }) {
   const isProfilePage = pathname === '/profile';
   const isBookingDetailsPage = pathname?.startsWith('/my-bookings/') && pathname !== '/my-bookings';
   const isFeedbackPage = pathname?.includes('/feedback');
+  const isCaptainBookingSuccessPage = pathname?.includes('/trippy-mates/') && pathname?.includes('/payment/success');
 
   return (
     <Provider store={store}>
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {!isAuthPage && <Header/>}
+        {!isAuthPage && !isCaptainBookingSuccessPage && <Header/>}
         <main style={{ flex: 1 }}>
           {children}
         </main>
-        {!isAuthPage && !isProfilePage && !isBookingDetailsPage && !isFeedbackPage && <Adventure />}
-        {!isAuthPage && <Footer />}
+        {!isAuthPage && !isProfilePage && !isBookingDetailsPage && !isFeedbackPage && !isCaptainBookingSuccessPage && <Adventure />}
+        {!isAuthPage && !isCaptainBookingSuccessPage && <Footer />}
       </div>
     </Provider>
   );

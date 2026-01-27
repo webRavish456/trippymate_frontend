@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Grid } from "@mui/material";
+import { Grid, Skeleton } from "@mui/material";
 import { API_BASE_URL } from '@/lib/config';
 
 export default function BookingDetailPage() {
@@ -11,6 +11,7 @@ export default function BookingDetailPage() {
   const bookingId = params.id;
 
   const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showFeedback, setShowFeedback] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -21,159 +22,92 @@ export default function BookingDetailPage() {
     }, 3000);
   };
 
-  // Static booking data
-  const staticBookings = {
-    '1': {
-      id: '1',
-      packageName: 'Manali Adventure Escape',
-      destination: 'Manali',
-      tripDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 17998,
-      baseAmount: 19998,
-      discount: 2000,
-      couponCode: 'SUMMER20',
-      promoCode: 'TRIPPY2024',
-      bookingId: 'BK001234',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop',
-      groups: [
-        {
-          groupId: 'G1',
-          members: [
-            { name: 'John Doe', age: 28 },
-            { name: 'Jane Doe', age: 26 }
-          ]
-        }
-      ],
-      contactDetails: {
-        name: 'John Doe',
-        phone: '+91 9122389911',
-        address: '123 Main St, City, State 123456'
-      },
-      guestDetails: [
-        { name: 'John Doe', age: 28, gender: 'Male', address: '123 Main St, City' },
-        { name: 'Jane Doe', age: 26, gender: 'Female', address: '123 Main St, City' }
-      ],
-      packageDetails: {
-        overview: 'Experience the breathtaking beauty of Manali with this amazing adventure package.',
-        highlights: [
-          'Trekking through scenic mountain trails',
-          'Camping under the stars',
-          'Visit to ancient temples',
-          'Adventure activities'
-        ],
-        inclusions: [
-          'Accommodation in 3-star hotels',
-          'All meals as per itinerary',
-          'Transportation',
-          'Trekking guide'
-        ]
-      }
-    },
-    '2': {
-      id: '2',
-      packageName: 'Goa Beach Paradise',
-      destination: 'Goa',
-      tripDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '4N/5D',
-      guests: 3,
-      totalAmount: 26997,
-      baseAmount: 29997,
-      discount: 3000,
-      couponCode: 'BEACH15',
-      promoCode: null,
-      bookingId: 'BK001235',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop',
-      groups: [
-        {
-          groupId: 'G1',
-          members: [
-            { name: 'John Doe', age: 28 },
-            { name: 'Jane Doe', age: 26 },
-            { name: 'Bob Smith', age: 30 }
-          ]
-        }
-      ],
-      contactDetails: {
-        name: 'John Doe',
-        phone: '+91 9122389911',
-        address: '123 Main St, City, State 123456'
-      },
-      guestDetails: [
-        { name: 'John Doe', age: 28, gender: 'Male', address: '123 Main St, City, State 123456', aadharCard: '9122389911' },
-        { name: 'Jane Doe', age: 26, gender: 'Female', address: '123 Main St, City, State 123456', aadharCard: '9122389912' },
-        { name: 'Bob Smith', age: 30, gender: 'Male', address: '123 Main St, City, State 123456', aadharCard: '9122389913' }
-      ],
-      packageDetails: {
-        overview: 'Relax and unwind on the beautiful beaches of Goa.',
-        highlights: [
-          'Beach activities',
-          'Water sports',
-          'Nightlife',
-          'Local cuisine'
-        ],
-        inclusions: [
-          'Beachfront resort',
-          'Breakfast included',
-          'Airport transfers',
-          'Beach activities'
-        ]
-      }
-    },
-    '3': {
-      id: '3',
-      packageName: 'Kerala Backwaters',
-      destination: 'Kerala',
-      tripDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '5N/6D',
-      guests: 2,
-      totalAmount: 24998,
-      baseAmount: 24998,
-      discount: 0,
-      couponCode: null,
-      promoCode: null,
-      bookingId: 'BK001200',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1580619305218-8423a3d6d3f3?w=800&h=600&fit=crop',
-      groups: [
-        {
-          groupId: 'G1',
-          members: [
-            { name: 'John Doe', age: 28 },
-            { name: 'Jane Doe', age: 26 }
-          ]
-        }
-      ],
-      contactDetails: {
-        name: 'John Doe',
-        phone: '+91 9122389911',
-        address: '123 Main St, City, State 123456'
-      },
-      guestDetails: [
-        { name: 'John Doe', age: 28, gender: 'Male', address: '123 Main St, City' },
-        { name: 'Jane Doe', age: 26, gender: 'Female', address: '123 Main St, City' }
-      ],
-      packageDetails: {
-        overview: 'Experience the serene backwaters of Kerala.',
-        highlights: [
-          'Houseboat cruise',
-          'Spice plantation visit',
-          'Ayurvedic spa',
-          'Traditional cuisine'
-        ],
-        inclusions: [
-          'Houseboat accommodation',
-          'All meals',
-          'Local guide',
-          'Spa session'
-        ]
-      },
-      hasFeedback: false
-    }
-  };
+  // Booking Details Skeleton Component
+  const BookingDetailsSkeleton = () => (
+    <>
+      <Grid container spacing={4}>
+        {/* Left Column */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          {/* Trip Details Skeleton */}
+          <div className="packages-detail-card">
+            <Skeleton variant="text" width="30%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <div className="packages-trip-details-content">
+              <div className="packages-trip-image">
+                <Skeleton variant="rectangular" width="100%" height="100%" sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              </div>
+              <div className="packages-trip-info">
+                <Skeleton variant="text" width="70%" height={36} sx={{ mb: 1.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                <div className="packages-trip-options" style={{ marginBottom: '1rem' }}>
+                  <Skeleton variant="text" width={120} height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width={100} height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width={140} height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                </div>
+                <Skeleton variant="text" width="50%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="text" width="80%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              </div>
+            </div>
+          </div>
+
+          {/* Group Details Skeleton */}
+          <div className="packages-detail-card">
+            <Skeleton variant="text" width="30%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="text" width="40%" height={24} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <div style={{ marginTop: '1rem' }}>
+              <Skeleton variant="rectangular" width="100%" height={80} sx={{ borderRadius: '0.5rem', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+              <Skeleton variant="rectangular" width="100%" height={80} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+            </div>
+          </div>
+
+          {/* Payment Information Skeleton */}
+          <div className="packages-detail-card">
+            <Skeleton variant="text" width="35%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              <Skeleton variant="text" width="50%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              <Skeleton variant="text" width="70%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              <Skeleton variant="text" width="40%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+            </div>
+          </div>
+        </Grid>
+
+        {/* Right Column */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <div className="packages-sticky-sidebar">
+            {/* Timeline Skeleton */}
+            <div className="packages-booking-card">
+              <Skeleton variant="text" width="50%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {[1, 2, 3].map((item) => (
+                  <div key={item} style={{ display: 'flex', gap: '1rem' }}>
+                    <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                    <div style={{ flex: 1 }}>
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="80%" height={16} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Price Details Skeleton */}
+            <div className="packages-booking-card">
+              <Skeleton variant="text" width="40%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+                <Skeleton variant="text" width="100%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="text" width="80%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="text" width="90%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="text" width="60%" height={32} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              </div>
+              <div className="packages-booking-actions">
+                <Skeleton variant="rectangular" width="100%" height={44} sx={{ borderRadius: '0.5rem', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="rectangular" width="100%" height={44} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+              </div>
+            </div>
+          </div>
+        </Grid>
+      </Grid>
+    </>
+  );
 
   useEffect(() => {
     if (bookingId) {
@@ -183,6 +117,7 @@ export default function BookingDetailPage() {
 
   const fetchBookingDetails = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         router.push('/auth/login');
@@ -203,19 +138,33 @@ export default function BookingDetailPage() {
           setShowFeedback(true);
         }
       } else {
-        // Fallback to static data if available
-        if (staticBookings[bookingId]) {
-          setBooking(staticBookings[bookingId]);
-        }
+        setBooking(null);
       }
     } catch (error) {
       console.error('Error fetching booking details:', error);
-      // Fallback to static data if available
-      if (staticBookings[bookingId]) {
-        setBooking(staticBookings[bookingId]);
-      }
+      setBooking(null);
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="packages-page">
+        <div className="profile-page-header">
+          <div className="profile-page-header-container">
+            <Skeleton variant="text" width="40%" height={48} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+          </div>
+        </div>
+        <section className="packages-details-section">
+          <div className="packages-details-container">
+            <BookingDetailsSkeleton />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (!booking) {
     return (
@@ -271,13 +220,13 @@ export default function BookingDetailPage() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
                         </svg>
-                        {booking.destination}
+                        {booking.isCaptainBooking && (booking.destination === 'Unknown' || booking.destination === 'N/A') ? 'Custom' : booking.destination}
                       </span>
                       <span className="packages-trip-option">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" fill="currentColor"/>
                         </svg>
-                        {booking.duration}
+                        {booking.isCaptainBooking && (booking.duration === 'N/A' || !booking.duration) ? 'Custom' : booking.duration}
                       </span>
                       <span className="packages-trip-option">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -317,7 +266,9 @@ export default function BookingDetailPage() {
                         {group.members.map((member, memberIndex) => (
                           <div key={memberIndex} className="packages-member-item">
                             <span className="packages-member-name">{member.name}</span>
-                            <span className="packages-member-age">{member.age} years</span>
+                            <span className="packages-member-age">
+                              {member.age === null || member.age === undefined || member.age === 0 ? 'N/A' : `${member.age} years`}
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -336,14 +287,14 @@ export default function BookingDetailPage() {
                   </div>
                   <div className="packages-payment-row">
                     <span className="packages-payment-label">Payment Status:</span>
-                    <span className={`packages-payment-status packages-payment-status-${booking.status === 'completed' ? 'paid' : 'pending'}`}>
-                      {booking.status === 'completed' ? 'Paid' : 'Pending'}
+                    <span className={`packages-payment-status packages-payment-status-${booking.paymentStatus === 'completed' ? 'paid' : 'pending'}`}>
+                      {booking.paymentStatus === 'completed' ? 'Paid' : 'Pending'}
                     </span>
                   </div>
                   <div className="packages-payment-row">
                     <span className="packages-payment-label">Booking Date:</span>
                     <span className="packages-payment-value">
-                      {new Date(booking.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                      {new Date(booking.bookingDate || booking.createdAt || booking.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(booking.bookingDate || booking.createdAt || booking.tripDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
                     </span>
                   </div>
                   <div className="packages-payment-row">
@@ -394,7 +345,7 @@ export default function BookingDetailPage() {
                       <div className="packages-timeline-content">
                         <div className="packages-timeline-title">Booking Confirmed</div>
                         <div className="packages-timeline-date">
-                          {new Date(booking.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
+                          {new Date(booking.bookingDate || booking.createdAt || booking.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}, {new Date(booking.bookingDate || booking.createdAt || booking.tripDate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}
                         </div>
                       </div>
                     </div>
@@ -491,9 +442,15 @@ export default function BookingDetailPage() {
                     )}
                     <button 
                       className="packages-continue-shopping-btn"
-                      onClick={() => router.push('/packages')}
+                      onClick={() => {
+                        if (booking.isCaptainBooking && booking.captainId) {
+                          router.push(`/trippy-mates/${booking.captainId}`);
+                        } else {
+                          router.push('/packages');
+                        }
+                      }}
                     >
-                      View Packages
+                      {booking.isCaptainBooking ? 'View Captain' : 'View Packages'}
                     </button>
                   </div>
                 </div>

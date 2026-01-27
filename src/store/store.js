@@ -17,9 +17,15 @@ const loadInitialState = () => {
     if (token && storedUser) {
       const userData = JSON.parse(storedUser);
       
-      if (userData.picture && !userData.profilePicture) {
+      // Normalize profilePicture - ensure it's set from picture if available
+      if (userData && userData.picture && !userData.profilePicture) {
         userData.profilePicture = userData.picture;
       }
+      // Ensure profilePicture is not empty string
+      if (userData && userData.profilePicture === '') {
+        userData.profilePicture = null;
+      }
+      
       return {
         user: {
           user: userData,
@@ -47,7 +53,16 @@ if (typeof window !== 'undefined') {
   store.subscribe(() => {
     const state = store.getState();
     if (state.user && state.user.user) {
-      localStorage.setItem('user', JSON.stringify(state.user.user));
+      const userData = { ...state.user.user };
+      // Normalize profilePicture before saving
+      if (userData.picture && !userData.profilePicture) {
+        userData.profilePicture = userData.picture;
+      }
+      // Don't save empty string as profilePicture
+      if (userData.profilePicture === '') {
+        userData.profilePicture = null;
+      }
+      localStorage.setItem('user', JSON.stringify(userData));
     } else {
       localStorage.removeItem('user');
     }

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay } from 'swiper/modules';
-import { Container, Grid } from '@mui/material';
+import { Container, Grid, Skeleton } from '@mui/material';
 import 'swiper/css';
 import 'swiper/css/navigation';
 
@@ -39,6 +39,7 @@ export default function TrippyMatesPage() {
   const [captainBookings, setCaptainBookings] = useState([]);
   const [bookingConflict, setBookingConflict] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [selectedUnavailableDates, setSelectedUnavailableDates] = useState([]);
 
   // Fetch captains from API on mount
   useEffect(() => {
@@ -130,6 +131,46 @@ export default function TrippyMatesPage() {
       console.error('Error fetching captain bookings:', err);
       // On error, set empty array so booking can still proceed
       setCaptainBookings([]);
+    }
+  };
+
+  // Check if a date is unavailable
+  const isDateUnavailable = (dateString) => {
+    if (!dateString || !selectedCaptain) return false;
+    const date = new Date(dateString);
+    date.setHours(0, 0, 0, 0);
+    // Check against all unavailable dates for this captain
+    const captainUnavailableDates = unavailableDates[selectedCaptain.id] || [];
+    return captainUnavailableDates.some(unavDate => {
+      const unav = new Date(unavDate);
+      unav.setHours(0, 0, 0, 0);
+      return date.getTime() === unav.getTime();
+    });
+  };
+
+  // Check captain availability for selected dates
+  // Note: This function is used for validation, but we always keep showing all unavailable dates
+  const checkCaptainAvailability = async (captainId, startDate, endDate) => {
+    if (!captainId || !startDate || !endDate) {
+      return [];
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/user/captain/${captainId}/availability?startDate=${startDate}&endDate=${endDate}`
+      );
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        // Return the dates but don't update selectedUnavailableDates here
+        // We'll keep showing all unavailable dates
+        return data.data.unavailableDates || [];
+      } else {
+        return [];
+      }
+    } catch (err) {
+      console.error('Error checking captain availability:', err);
+      return [];
     }
   };
 
@@ -386,9 +427,6 @@ export default function TrippyMatesPage() {
     }
   };
 
-  const closeHowItWorks = () => {
-    setShowHowItWorks(false);
-  };
 
   return (
     <div className="trippy-mates-page">
@@ -450,19 +488,6 @@ export default function TrippyMatesPage() {
                 <option value="beach">Beach</option>
                 <option value="heritage">Heritage</option>
                 <option value="nature">Nature</option>
-              </select>
-            </div>
-            <div className="trippy-mates-search-field-new">
-              <select
-                value={searchData.language}
-                onChange={(e) => setSearchData({ ...searchData, language: e.target.value })}
-                className="trippy-mates-search-select"
-              >
-                <option value="">Language</option>
-                <option value="hindi">Hindi</option>
-                <option value="english">English</option>
-                <option value="french">French</option>
-                <option value="spanish">Spanish</option>
               </select>
             </div>
             <div className="trippy-mates-search-field-new">
@@ -577,9 +602,49 @@ export default function TrippyMatesPage() {
             Verified experts ready to make your journey unforgettable
           </p>
           {loading ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600">Loading captains...</p>
-            </div>
+            <Grid container columnSpacing={4} rowSpacing={6}>
+              {[...new Array(6)].map((_, idx) => (
+                <Grid size={{xs: 12, sm: 6, md: 4}} key={idx} sx={{ display: 'flex' }}>
+                  <div className="trippy-mates-captain-card" style={{ width: '100%' }}>
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height={180}
+                      sx={{
+                        bgcolor: '#e2e8f0',
+                        borderRadius: '1rem 1rem 0 0',
+                      }}
+                      animation="wave"
+                    />
+                    <div className="trippy-mates-captain-card-content" style={{ paddingTop: '3rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-60px', marginBottom: '1rem' }}>
+                        <Skeleton
+                          variant="circular"
+                          width={120}
+                          height={120}
+                          sx={{ bgcolor: '#e2e8f0' }}
+                          animation="wave"
+                        />
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <Skeleton variant="text" width="60%" height={28} sx={{ mx: 'auto', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="80%" height={20} sx={{ mx: 'auto', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="70%" height={20} sx={{ mx: 'auto', mb: 1.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                          <Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: '0.375rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                          <Skeleton variant="rectangular" width={80} height={24} sx={{ borderRadius: '0.375rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                        </div>
+                        <Skeleton variant="text" width="50%" height={20} sx={{ mx: 'auto', mb: 1.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                          <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                          <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Grid>
+              ))}
+            </Grid>
           ) : error ? (
             <div className="text-center py-8">
               <p className="text-red-600">Error: {error}</p>
@@ -605,13 +670,6 @@ export default function TrippyMatesPage() {
                   style={{backgroundImage: `url(${captain.backgroundImage})`}}
                 >
                   <div className="trippy-mates-captain-card-overlay"></div>
-                  {unavailableDates[captain.id] && unavailableDates[captain.id].length > 0 && (
-                    <div className="trippy-mates-captain-unavailable-badge">
-                      <span className="trippy-mates-unavailable-text">
-                        {unavailableDates[captain.id].length} days unavailable
-                      </span>
-                    </div>
-                  )}
                   <div className="trippy-mates-captain-badge-on-image">
                     <span className={`trippy-mates-badge trippy-mates-badge-${captain.badgeColor}`}>
                       {captain.badge}
@@ -665,16 +723,6 @@ export default function TrippyMatesPage() {
                     <div className="trippy-mates-captain-price">
                       Starting at <span className="trippy-mates-price-amount">₹{captain.price}/day</span>
                     </div>
-                    {unavailableDates[captain.id] && unavailableDates[captain.id].length > 0 && (
-                      <div className="trippy-mates-captain-availability-warning">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="trippy-mates-warning-icon">
-                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#f59e0b"/>
-                        </svg>
-                        <span className="trippy-mates-availability-text">
-                          Captain is unavailable on some dates. Please choose another date or another captain.
-                        </span>
-                      </div>
-                    )}
                     <div className="trippy-mates-captain-actions">
                       <button 
                         className="trippy-mates-hire-btn"
@@ -683,6 +731,9 @@ export default function TrippyMatesPage() {
                           setShowBookingModal(true);
                           setBookingConflict(null);
                           setFormErrors({});
+                          // Show unavailable dates immediately when modal opens
+                          const captainUnavailableDates = unavailableDates[captain.id] || [];
+                          setSelectedUnavailableDates(captainUnavailableDates);
                           // Fetch captain bookings when modal opens
                           await fetchCaptainBookings(captain.id);
                         }}
@@ -956,10 +1007,12 @@ export default function TrippyMatesPage() {
               <button className="trippy-mates-booking-modal-close" onClick={() => {
                 setShowBookingModal(false);
                 setFormErrors({});
+                setSelectedUnavailableDates([]);
               }}>
                 ×
               </button>
             </div>
+            
             <form className="trippy-mates-booking-form" onSubmit={handleBookingSubmit}>
               {/* Show existing bookings */}
               {captainBookings.length > 0 && (
@@ -995,6 +1048,50 @@ export default function TrippyMatesPage() {
                 </div>
               )}
 
+          {selectedUnavailableDates.length > 0 && (
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '2px solid #dc2626',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                margin: '1rem 0rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                  </svg>
+                  <strong style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                    Captain is not available on the following dates:
+                  </strong>
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '0.5rem'
+                }}>
+                  {selectedUnavailableDates.map((date, idx) => (
+                    <span 
+                      key={idx}
+                      style={{
+                        backgroundColor: '#fee2e2',
+                        color: '#991b1b',
+                        padding: '0.375rem 0.75rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: '500',
+                        border: '1px solid #fecaca'
+                      }}
+                    >
+                      {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
               <div className="trippy-mates-booking-form-group">
                 <label>Destination / Where to go <span className="required">*</span></label>
                 <input
@@ -1003,7 +1100,7 @@ export default function TrippyMatesPage() {
                   onChange={(e) => {
                     setBookingForm({ ...bookingForm, destination: e.target.value });
                     setBookingConflict(null);
-                    // Clear error when user starts typing
+                
                     if (formErrors.destination) {
                       setFormErrors({ ...formErrors, destination: '' });
                     }
@@ -1032,27 +1129,51 @@ export default function TrippyMatesPage() {
                     type="date"
                     value={bookingForm.startDate}
                     onChange={(e) => {
-                      setBookingForm({ ...bookingForm, startDate: e.target.value });
+                      const selectedDate = e.target.value;
+                      
+                      // Check if selected date is unavailable
+                      if (selectedDate && isDateUnavailable(selectedDate)) {
+                        setFormErrors({ ...formErrors, startDate: 'This date is not available. Please select a different date.' });
+                        setBookingForm({ ...bookingForm, startDate: '' });
+                        return;
+                      }
+                      
+                      setBookingForm({ ...bookingForm, startDate: selectedDate });
                       setBookingConflict(null);
                       // Clear error when user selects date
                       if (formErrors.startDate) {
                         setFormErrors({ ...formErrors, startDate: '' });
                       }
-                      // Re-check conflict when dates change
-                      if (e.target.value && bookingForm.endDate && bookingForm.destination) {
-                        const conflict = checkBookingConflict(
-                          e.target.value,
-                          bookingForm.endDate,
-                          bookingForm.destination
-                        );
-                        setBookingConflict(conflict);
+                      // Always keep showing all unavailable dates - don't clear them
+                      const captainUnavailableDates = unavailableDates[selectedCaptain?.id] || [];
+                      setSelectedUnavailableDates(captainUnavailableDates);
+                      
+                      // Check availability when dates are selected (for validation only)
+                      if (selectedDate && bookingForm.endDate && selectedCaptain) {
+                        // Check availability (for validation, but don't update selectedUnavailableDates)
+                        checkCaptainAvailability(selectedCaptain.id, selectedDate, bookingForm.endDate);
+                        // Re-check conflict when dates change
+                        if (bookingForm.destination) {
+                          const conflict = checkBookingConflict(
+                            selectedDate,
+                            bookingForm.endDate,
+                            bookingForm.destination
+                          );
+                          setBookingConflict(conflict);
+                        }
                       }
                     }}
                     min={new Date().toISOString().split('T')[0]}
                     className={formErrors.startDate ? 'trippy-mates-input-error' : ''}
+                    style={{
+                      borderColor: formErrors.startDate ? '#dc2626' : (bookingForm.startDate && isDateUnavailable(bookingForm.startDate) ? '#dc2626' : undefined),
+                      borderWidth: formErrors.startDate || (bookingForm.startDate && isDateUnavailable(bookingForm.startDate)) ? '2px' : undefined
+                    }}
                   />
                   {formErrors.startDate && (
-                    <span className="trippy-mates-form-error">{formErrors.startDate}</span>
+                    <span style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                      {formErrors.startDate}
+                    </span>
                   )}
                 </div>
                 <div className="trippy-mates-booking-form-group">
@@ -1061,30 +1182,123 @@ export default function TrippyMatesPage() {
                     type="date"
                     value={bookingForm.endDate}
                     onChange={(e) => {
-                      setBookingForm({ ...bookingForm, endDate: e.target.value });
+                      const selectedDate = e.target.value;
+                      
+                      // Check if selected date is unavailable
+                      if (selectedDate && isDateUnavailable(selectedDate)) {
+                        setFormErrors({ ...formErrors, endDate: 'This date is not available. Please select a different date.' });
+                        setBookingForm({ ...bookingForm, endDate: '' });
+                        return;
+                      }
+                      
+                      // Check if any date in the range is unavailable
+                      if (bookingForm.startDate && selectedDate) {
+                        const start = new Date(bookingForm.startDate);
+                        const end = new Date(selectedDate);
+                        const unavailableInRange = selectedUnavailableDates.filter(dateStr => {
+                          const date = new Date(dateStr);
+                          return date >= start && date <= end;
+                        });
+                        
+                        if (unavailableInRange.length > 0) {
+                          setFormErrors({ ...formErrors, endDate: `Selected range includes ${unavailableInRange.length} unavailable date(s). Please choose a different range.` });
+                          setBookingForm({ ...bookingForm, endDate: '' });
+                          return;
+                        }
+                      }
+                      
+                      setBookingForm({ ...bookingForm, endDate: selectedDate });
                       setBookingConflict(null);
                       // Clear error when user selects date
                       if (formErrors.endDate) {
                         setFormErrors({ ...formErrors, endDate: '' });
                       }
-                      // Re-check conflict when dates change
-                      if (bookingForm.startDate && e.target.value && bookingForm.destination) {
-                        const conflict = checkBookingConflict(
-                          bookingForm.startDate,
-                          e.target.value,
-                          bookingForm.destination
-                        );
-                        setBookingConflict(conflict);
+                      // Always keep showing all unavailable dates - don't clear them
+                      const captainUnavailableDates = unavailableDates[selectedCaptain?.id] || [];
+                      setSelectedUnavailableDates(captainUnavailableDates);
+                      
+                      // Check availability when dates are selected (for validation only)
+                      if (bookingForm.startDate && selectedDate && selectedCaptain) {
+                        // Check availability (for validation, but don't update selectedUnavailableDates)
+                        checkCaptainAvailability(selectedCaptain.id, bookingForm.startDate, selectedDate);
+                        // Re-check conflict when dates change
+                        if (bookingForm.destination) {
+                          const conflict = checkBookingConflict(
+                            bookingForm.startDate,
+                            selectedDate,
+                            bookingForm.destination
+                          );
+                          setBookingConflict(conflict);
+                        }
                       }
                     }}
                     min={bookingForm.startDate || new Date().toISOString().split('T')[0]}
                     className={formErrors.endDate ? 'trippy-mates-input-error' : ''}
+                    style={{
+                      borderColor: formErrors.endDate ? '#dc2626' : (bookingForm.endDate && isDateUnavailable(bookingForm.endDate) ? '#dc2626' : undefined),
+                      borderWidth: formErrors.endDate || (bookingForm.endDate && isDateUnavailable(bookingForm.endDate)) ? '2px' : undefined
+                    }}
                   />
                   {formErrors.endDate && (
-                    <span className="trippy-mates-form-error">{formErrors.endDate}</span>
+                    <span style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                      {formErrors.endDate}
+                    </span>
                   )}
                 </div>
               </div>
+              
+              {/* Visual indicator for unavailable dates in selected range */}
+              {bookingForm.startDate && bookingForm.endDate && selectedUnavailableDates.length > 0 && (
+                (() => {
+                  const start = new Date(bookingForm.startDate);
+                  const end = new Date(bookingForm.endDate);
+                  const unavailableInRange = selectedUnavailableDates.filter(dateStr => {
+                    const date = new Date(dateStr);
+                    return date >= start && date <= end;
+                  });
+                  
+                  if (unavailableInRange.length > 0) {
+                    return (
+                      <div style={{
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '0.5rem',
+                        padding: '0.75rem',
+                        marginTop: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                          </svg>
+                          <strong style={{ color: '#dc2626', fontSize: '0.8125rem' }}>
+                            {unavailableInRange.length} unavailable date(s) in selected range:
+                          </strong>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                          {unavailableInRange.map((date, idx) => (
+                            <span 
+                              key={idx}
+                              style={{
+                                backgroundColor: '#fee2e2',
+                                color: '#991b1b',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                border: '1px solid #fecaca'
+                              }}
+                            >
+                              {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
 
               <div className="trippy-mates-booking-form-group">
                 <label>Number of Days</label>
@@ -1181,7 +1395,7 @@ export default function TrippyMatesPage() {
                   className="trippy-mates-booking-submit-btn" 
                   disabled={bookingLoading || (bookingConflict && bookingConflict.conflict)}
                 >
-                  {bookingLoading ? 'Booking...' : 'Confirm Booking'}
+                  {bookingLoading ? 'Processing...' : 'Proceed'}
                 </button>
               </div>
             </form>

@@ -11,8 +11,19 @@ const userReducer = (state = initialState, action) => {
     case SET_USER:
       // Handle Google profile picture
       const userData = action.payload;
-      if (userData && userData.picture && !userData.profilePicture) {
-        userData.profilePicture = userData.picture;
+      if (userData) {
+        // Normalize profilePicture from picture field
+        if (userData.picture && !userData.profilePicture) {
+          userData.profilePicture = userData.picture;
+        }
+        // Ensure profilePicture is not empty string
+        if (userData.profilePicture === '') {
+          userData.profilePicture = null;
+        }
+        // Ensure profilePicture URL is valid
+        if (userData.profilePicture && typeof userData.profilePicture === 'string' && userData.profilePicture.trim() === '') {
+          userData.profilePicture = null;
+        }
       }
       return {
         ...state,

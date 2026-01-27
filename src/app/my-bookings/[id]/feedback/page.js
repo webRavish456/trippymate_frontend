@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Grid } from "@mui/material";
+import { Grid, Skeleton } from "@mui/material";
 import { API_BASE_URL } from '@/lib/config';
 
 export default function FeedbackPage() {
@@ -11,6 +11,7 @@ export default function FeedbackPage() {
   const bookingId = params.id;
 
   const [booking, setBooking] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState({
     captainRating: 0,
     servicesRating: 0,
@@ -28,45 +29,64 @@ export default function FeedbackPage() {
     }, 3000);
   };
 
-  // Static booking data (same as booking details page)
-  const staticBookings = {
-    '1': {
-      id: '1',
-      packageName: 'Manali Adventure Escape',
-      destination: 'Manali',
-      tripDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 17998,
-      bookingId: 'BK001234',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=600&fit=crop'
-    },
-    '2': {
-      id: '2',
-      packageName: 'Goa Beach Paradise',
-      destination: 'Goa',
-      tripDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '4N/5D',
-      guests: 3,
-      totalAmount: 26997,
-      bookingId: 'BK001235',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&h=600&fit=crop'
-    },
-    '3': {
-      id: '3',
-      packageName: 'Kerala Backwaters',
-      destination: 'Kerala',
-      tripDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '5N/6D',
-      guests: 2,
-      totalAmount: 24998,
-      bookingId: 'BK001200',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1580619305218-8423a3d6d3f3?w=800&h=600&fit=crop'
-    }
-  };
+  // Feedback Page Skeleton Component
+  const FeedbackSkeleton = () => (
+    <form className="packages-feedback-form-new">
+      <Grid container spacing={4}>
+        {/* Left Column */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          {/* Booking Info Skeleton */}
+          <div className="packages-detail-card">
+            <div className="packages-feedback-booking-info">
+              <div className="packages-feedback-booking-image">
+                <Skeleton variant="rectangular" width="100%" height="100%" sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              </div>
+              <div className="packages-feedback-booking-details">
+                <Skeleton variant="text" width="60%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                <Skeleton variant="text" width="70%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+              </div>
+            </div>
+          </div>
+
+          {/* Rating Sections Skeleton */}
+          <div className="packages-detail-card">
+            <div className="packages-feedback-ratings-grid">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="packages-feedback-rating-item">
+                  <div className="packages-feedback-rating-header">
+                    <Skeleton variant="text" width={120} height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Skeleton key={star} variant="circular" width={32} height={32} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Written Review Skeleton */}
+          <div className="packages-detail-card">
+            <Skeleton variant="text" width="40%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="text" width="30%" height={20} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="rectangular" width="100%" height={120} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+          </div>
+        </Grid>
+
+        {/* Right Column */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <div className="packages-booking-card">
+            <Skeleton variant="text" width="50%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="text" width="70%" height={20} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="rectangular" width="100%" height={200} sx={{ borderRadius: '0.5rem', mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="rectangular" width="100%" height={48} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+          </div>
+        </Grid>
+      </Grid>
+    </form>
+  );
 
   useEffect(() => {
     if (bookingId) {
@@ -76,6 +96,7 @@ export default function FeedbackPage() {
 
   const fetchBookingAndFeedback = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         router.push('/auth/login');
@@ -114,17 +135,13 @@ export default function FeedbackPage() {
           });
         }
       } else {
-        // Fallback to static data
-        if (staticBookings[bookingId]) {
-          setBooking(staticBookings[bookingId]);
-        }
+        setBooking(null);
       }
     } catch (error) {
       console.error('Error fetching booking/feedback:', error);
-      // Fallback to static data
-      if (staticBookings[bookingId]) {
-        setBooking(staticBookings[bookingId]);
-      }
+      setBooking(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -194,6 +211,24 @@ export default function FeedbackPage() {
       showToast('Failed to submit feedback. Please try again.', 'error');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="packages-page">
+        <div className="profile-page-header">
+          <div className="profile-page-header-container">
+            <Skeleton variant="text" width="40%" height={48} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+            <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+          </div>
+        </div>
+        <section className="packages-details-section">
+          <div className="packages-details-container">
+            <FeedbackSkeleton />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (!booking) {
     return (

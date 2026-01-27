@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Grid } from "@mui/material";
+import { Skeleton } from "@mui/material";
 import { API_BASE_URL } from '@/lib/config';
 
 export default function MyBookingsPage() {
@@ -16,6 +16,84 @@ export default function MyBookingsPage() {
   useEffect(() => {
     fetchBookings();
   }, [activeTab]);
+
+  const normalizeBookingForUI = (raw) => {
+    const id = raw?.id || raw?._id || raw?.bookingId || raw?.bookingReference;
+
+    const captainName =
+      raw?.captain?.name ||
+      raw?.captainName ||
+      raw?.captain_details?.name ||
+      raw?.captainDetails?.name;
+
+    const packageName =
+      raw?.packageName ||
+      raw?.package?.name ||
+      raw?.package?.title ||
+      (captainName ? `Captain - ${captainName}` : (raw?.isCaptainBooking ? 'Captain' : 'Booking'));
+
+    const isCaptainBooking = raw?.isCaptainBooking || (!raw?.packageId && raw?.captainId);
+    const destination =
+      raw?.destination ||
+      raw?.location ||
+      raw?.tripLocation ||
+      raw?.guestDetails?.[0]?.guestAddress ||
+      raw?.guestDetails?.[0]?.address ||
+      raw?.contactAddress ||
+      raw?.captain?.location ||
+      raw?.captain_details?.location ||
+      raw?.captainDetails?.location ||
+      (isCaptainBooking ? 'Custom' : 'Unknown');
+
+    const tripDate = raw?.tripDate || raw?.startDate || raw?.date || raw?.createdAt;
+    const bookingDate = raw?.bookingDate || raw?.createdAt || tripDate;
+
+    const duration =
+      raw?.duration ||
+      raw?.tripDuration ||
+      (isCaptainBooking 
+        ? 'Custom'
+        : (raw?.startDate && raw?.endDate
+          ? `${Math.ceil((new Date(raw.endDate) - new Date(raw.startDate)) / (1000 * 60 * 60 * 24)) + 1}D`
+          : 'Custom'));
+
+    const totalAmount = raw?.totalAmount ?? raw?.amount ?? raw?.price ?? raw?.totalPrice ?? 0;
+
+    const bookingId = raw?.bookingId || raw?.bookingReference || raw?.reference || raw?.orderId || id;
+
+    const status =
+      raw?.status === 'confirmed' || raw?.status === 'completed'
+        ? raw.status
+        : raw?.status
+          ? String(raw.status).toLowerCase()
+          : 'confirmed';
+
+    const image =
+      raw?.image ||
+      raw?.package?.image ||
+      raw?.package?.coverImage ||
+      raw?.captain?.backgroundImage ||
+      raw?.captain?.image ||
+      raw?.captain_details?.backgroundImage ||
+      raw?.captainDetails?.backgroundImage ||
+      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop';
+
+    return {
+      ...raw,
+      id,
+      packageName,
+      destination,
+      tripDate,
+      bookingDate,
+      duration,
+      totalAmount,
+      bookingId,
+      status,
+      image,
+      isCaptainBooking,
+      captainId: raw?.captainId || null
+    };
+  };
 
   const fetchBookings = async () => {
     try {
@@ -36,7 +114,10 @@ export default function MyBookingsPage() {
       const result = await response.json();
 
       if (result.status && result.data) {
-        setBookings(result.data);
+        const normalized = Array.isArray(result.data)
+          ? result.data.map(normalizeBookingForUI)
+          : [];
+        setBookings(normalized);
       } else {
         setBookings([]);
       }
@@ -48,186 +129,83 @@ export default function MyBookingsPage() {
     }
   };
 
-  // Static data for upcoming trips (fallback)
-  const upcomingTrips = [
-    {
-      id: '1',
-      packageName: 'Manali Adventure Escape',
-      destination: 'Manali',
-      tripDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 17998,
-      bookingId: 'BK001234',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop'
-    },
-    {
-      id: '2',
-      packageName: 'Goa Beach Paradise',
-      destination: 'Goa',
-      tripDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '4N/5D',
-      guests: 3,
-      totalAmount: 26997,
-      bookingId: 'BK001235',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop'
-    },
-    {
-      id: '4',
-      packageName: 'Rajasthan Royal Heritage',
-      destination: 'Rajasthan',
-      tripDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '6N/7D',
-      guests: 2,
-      totalAmount: 29998,
-      bookingId: 'BK001236',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=300&fit=crop'
-    },
-    {
-      id: '5',
-      packageName: 'Kashmir Valley Tour',
-      destination: 'Kashmir',
-      tripDate: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '5N/6D',
-      guests: 4,
-      totalAmount: 34997,
-      bookingId: 'BK001237',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&h=300&fit=crop'
-    },
-    {
-      id: '6',
-      packageName: 'Darjeeling Hill Station',
-      destination: 'Darjeeling',
-      tripDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '4N/5D',
-      guests: 2,
-      totalAmount: 21998,
-      bookingId: 'BK001238',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop'
-    },
-    {
-      id: '7',
-      packageName: 'Ooty Nature Retreat',
-      destination: 'Ooty',
-      tripDate: new Date(Date.now() + 105 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 18998,
-      bookingId: 'BK001239',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=300&fit=crop'
-    },
-    {
-      id: '8',
-      packageName: 'Andaman Island Paradise',
-      destination: 'Andaman',
-      tripDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '6N/7D',
-      guests: 2,
-      totalAmount: 39998,
-      bookingId: 'BK001240',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop'
-    },
-    {
-      id: '9',
-      packageName: 'Shimla Snow Adventure',
-      destination: 'Shimla',
-      tripDate: new Date(Date.now() + 135 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '4N/5D',
-      guests: 3,
-      totalAmount: 24997,
-      bookingId: 'BK001241',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=400&h=300&fit=crop'
-    },
-    {
-      id: '10',
-      packageName: 'Munnar Tea Gardens',
-      destination: 'Munnar',
-      tripDate: new Date(Date.now() + 150 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 19998,
-      bookingId: 'BK001242',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop'
-    },
-    {
-      id: '11',
-      packageName: 'Rishikesh Adventure',
-      destination: 'Rishikesh',
-      tripDate: new Date(Date.now() + 165 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '4N/5D',
-      guests: 2,
-      totalAmount: 22998,
-      bookingId: 'BK001243',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&h=300&fit=crop'
-    },
-    {
-      id: '12',
-      packageName: 'Varanasi Spiritual Journey',
-      destination: 'Varanasi',
-      tripDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 17998,
-      bookingId: 'BK001244',
-      status: 'confirmed',
-      image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=300&fit=crop'
-    }
-  ];
+  // Booking Card Skeleton Component
+  const BookingCardSkeleton = () => (
+    <div className="packages-order-card" style={{ pointerEvents: 'none' }}>
+      <div className="packages-order-card-image">
+        <Skeleton 
+          variant="rectangular" 
+          width="100%" 
+          height="100%" 
+          sx={{ bgcolor: '#e2e8f0' }} 
+          animation="wave" 
+        />
+      </div>
+      <div className="packages-order-card-content">
+        <div style={{ position: 'absolute', top: 0, right: 0 }}>
+          <Skeleton 
+            variant="rectangular" 
+            width={100} 
+            height={32} 
+            sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} 
+            animation="wave" 
+          />
+        </div>
+        <Skeleton 
+          variant="text" 
+          width="70%" 
+          height={36} 
+          sx={{ mb: 1, bgcolor: '#e2e8f0' }} 
+          animation="wave" 
+        />
+        <div className="packages-order-card-meta">
+          <Skeleton 
+            variant="text" 
+            width={120} 
+            height={24} 
+            sx={{ bgcolor: '#e2e8f0' }} 
+            animation="wave" 
+          />
+          <Skeleton 
+            variant="text" 
+            width={140} 
+            height={24} 
+            sx={{ bgcolor: '#e2e8f0' }} 
+            animation="wave" 
+          />
+          <Skeleton 
+            variant="text" 
+            width={100} 
+            height={24} 
+            sx={{ bgcolor: '#e2e8f0' }} 
+            animation="wave" 
+          />
+        </div>
+        <div className="packages-order-card-footer">
+          <div className="packages-order-card-info">
+            <Skeleton 
+              variant="text" 
+              width={150} 
+              height={20} 
+              sx={{ bgcolor: '#e2e8f0' }} 
+              animation="wave" 
+            />
+          </div>
+          <div className="packages-order-card-amount">
+            <Skeleton 
+              variant="text" 
+              width={100} 
+              height={24} 
+              sx={{ bgcolor: '#e2e8f0' }} 
+              animation="wave" 
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
-  // Static data for completed trips
-  const completedTrips = [
-    {
-      id: '3',
-      packageName: 'Kerala Backwaters',
-      destination: 'Kerala',
-      tripDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '5N/6D',
-      guests: 2,
-      totalAmount: 24998,
-      bookingId: 'BK001200',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1580619305218-8423a3d6d3f3?w=400&h=300&fit=crop',
-      hasFeedback: false
-    },
-    {
-      id: '13',
-      packageName: 'Mysore Palace Tour',
-      destination: 'Mysore',
-      tripDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '2N/3D',
-      guests: 2,
-      totalAmount: 14998,
-      bookingId: 'BK001199',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=300&fit=crop',
-      hasFeedback: true
-    },
-    {
-      id: '14',
-      packageName: 'Pondicherry French Colony',
-      destination: 'Pondicherry',
-      tripDate: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-      duration: '3N/4D',
-      guests: 2,
-      totalAmount: 19998,
-      bookingId: 'BK001198',
-      status: 'completed',
-      image: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=300&fit=crop',
-      hasFeedback: true
-    }
-  ];
-
-  const allTrips = bookings.length > 0 ? bookings : (activeTab === 'upcoming' ? upcomingTrips : completedTrips);
+  const allTrips = bookings;
   
   // Pagination logic
   const totalPages = Math.ceil(allTrips.length / itemsPerPage);
@@ -257,8 +235,8 @@ export default function MyBookingsPage() {
       {/* Bookings Header Section */}
       <div className="profile-page-header">
         <div className="profile-page-header-container">
-          <h1 className="profile-page-title">My Orders</h1>
-          <p className="profile-page-subtitle">Track and manage your orders</p>
+          <h1 className="profile-page-title">My Bookings</h1>
+          <p className="profile-page-subtitle">Track and manage your bookings</p>
         </div>
       </div>
 
@@ -282,9 +260,10 @@ export default function MyBookingsPage() {
 
           {/* Trips List */}
           {loading ? (
-            <div className="packages-orders-empty">
-              <div className="packages-loading-spinner"></div>
-              <p>Loading bookings...</p>
+            <div className="packages-orders-list">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <BookingCardSkeleton key={index} />
+              ))}
             </div>
           ) : allTrips.length > 0 ? (
             <>
@@ -310,13 +289,13 @@ export default function MyBookingsPage() {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z" fill="currentColor"/>
                         </svg>
-                        {new Date(trip.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(trip.bookingDate || trip.tripDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                       <span className="packages-order-meta-item">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z" fill="currentColor"/>
                         </svg>
-                        {trip.duration}
+                        {trip.isCaptainBooking && trip.duration === 'Custom' ? 'Custom' : trip.duration}
                       </span>
                     </div>
                     <div className="packages-order-card-footer">

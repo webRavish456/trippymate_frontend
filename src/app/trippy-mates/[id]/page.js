@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Container, Grid } from '@mui/material';
+import { Container, Grid, Skeleton } from '@mui/material';
 
 import { API_BASE_URL } from '@/lib/config';
 
@@ -26,6 +26,8 @@ export default function CaptainProfilePage() {
     specialRequirements: ''
   });
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [selectedUnavailableDates, setSelectedUnavailableDates] = useState([]);
+  const [dateErrors, setDateErrors] = useState({ startDate: '', endDate: '' });
 
   useEffect(() => {
     fetchCaptainDetails();
@@ -63,6 +65,45 @@ export default function CaptainProfilePage() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check if a date is unavailable
+  const isDateUnavailable = (dateString) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    date.setHours(0, 0, 0, 0);
+    // Check against all unavailable dates
+    return unavailableDates.some(unavDate => {
+      const unav = new Date(unavDate);
+      unav.setHours(0, 0, 0, 0);
+      return date.getTime() === unav.getTime();
+    });
+  };
+
+  // Check captain availability for selected dates
+  // Note: This function is used for validation, but we always keep showing all unavailable dates
+  const checkCaptainAvailability = async (startDate, endDate) => {
+    if (!captainId || !startDate || !endDate) {
+      return [];
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/user/captain/${captainId}/availability?startDate=${startDate}&endDate=${endDate}`
+      );
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        // Return the dates but don't update selectedUnavailableDates here
+        // We'll keep showing all unavailable dates
+        return data.data.unavailableDates || [];
+      } else {
+        return [];
+      }
+    } catch (err) {
+      console.error('Error checking captain availability:', err);
+      return [];
     }
   };
 
@@ -105,9 +146,101 @@ export default function CaptainProfilePage() {
   if (loading) {
     return (
       <div className="trippy-mates-page">
-        <div className="text-center py-20">
-          <p className="text-gray-600">Loading captain details...</p>
-        </div>
+        {/* Banner Skeleton */}
+        <section className="trippy-mates-captain-profile-banner">
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height="100%"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              bgcolor: '#e2e8f0',
+            }}
+            animation="wave"
+          />
+        </section>
+
+        {/* Content Skeleton */}
+        <section className="trippy-mates-captain-profile-details">
+          <Container maxWidth="lg">
+            <Grid container spacing={4}>
+              {/* Profile Data & About - md-8 */}
+              <Grid size={{xs: 12, md: 8}}>
+                <div className="trippy-mates-captain-profile-content-wrapper">
+                  {/* Profile Card Skeleton */}
+                  <div className="trippy-mates-captain-profile-card-main">
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height={200}
+                      sx={{
+                        borderRadius: '1rem',
+                        bgcolor: '#ffffff',
+                        mb: 2,
+                      }}
+                      animation="wave"
+                    />
+                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '-80px', padding: '2rem' }}>
+                      <Skeleton
+                        variant="circular"
+                        width={120}
+                        height={120}
+                        sx={{ bgcolor: '#e2e8f0' }}
+                        animation="wave"
+                      />
+                      <div style={{ flex: 1 }}>
+                        <Skeleton variant="text" width="60%" height={32} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="80%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="70%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="50%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                         <Skeleton variant="rectangular" width={120} height={36} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                         <Skeleton variant="rectangular" width={120} height={36} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="rectangular" width={120} height={36} sx={{ borderRadius: '0.5rem', bgcolor: '#e2e8f0' }} animation="wave" />
+                         </div>
+                        <Skeleton variant="text" width="40%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* About Section Skeleton */}
+                  <div className="trippy-mates-captain-profile-content">
+                    <Skeleton variant="text" width="30%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="90%" height={20} sx={{ mb: 3, bgcolor: '#e2e8f0' }} animation="wave" />
+                    
+                    <Skeleton variant="text" width="25%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+                    
+                  </div>
+                </div>
+              </Grid>
+
+              {/* Booking Card Skeleton - md-4 */}
+              <Grid size={{xs: 12, md: 4}}>
+                <div className="trippy-mates-captain-booking-card">
+                  <Skeleton variant="text" width="70%" height={32} sx={{ mb: 2, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width="50%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width="60%" height={40} sx={{ mb: 3, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={48}
+                    sx={{
+                      borderRadius: '0.75rem',
+                      bgcolor: '#e2e8f0',
+                    }}
+                    animation="wave"
+                  />
+                </div>
+              </Grid>
+            </Grid>
+          </Container>
+        </section>
       </div>
     );
   }
@@ -130,116 +263,128 @@ export default function CaptainProfilePage() {
 
   return (
     <div className="trippy-mates-page">
-      {/* Hero Section with Captain Image */}
-      <section className="trippy-mates-captain-profile-hero">
+      {/* Banner Section - Only Background */}
+      <section className="trippy-mates-captain-profile-banner">
         <div 
-          className="trippy-mates-captain-profile-hero-bg"
+          className="trippy-mates-captain-profile-banner-bg"
           style={{backgroundImage: `url(${captain.backgroundImage})`}}
         >
-          <div className="trippy-mates-captain-profile-hero-overlay"></div>
+          <div className="trippy-mates-captain-profile-banner-overlay"></div>
         </div>
-        <div className="trippy-mates-container">
-          <button 
-            onClick={() => router.push('/trippy-mates')}
-            className="trippy-mates-back-btn"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Back
-          </button>
-          <div className="trippy-mates-captain-profile-header">
-            <div className="trippy-mates-captain-profile-image-large">
-              <img src={captain.image} alt={captain.name} />
-              {captain.verified && (
-                <div className="trippy-mates-verified-check-large">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
-                  </svg>
-                </div>
-              )}
-            </div>
-            <div className="trippy-mates-captain-profile-info">
-              <div className="trippy-mates-captain-profile-badge-rating">
-                {captain.badge && (
-                  <span className={`trippy-mates-badge trippy-mates-badge-${captain.badgeColor}`}>
-                    {captain.badge}
-                  </span>
-                )}
-                <div className="trippy-mates-captain-rating-large">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                  <span>{captain.rating}</span>
-                </div>
-              </div>
-              <h1 className="trippy-mates-captain-profile-name">{captain.name}</h1>
-              <div className="trippy-mates-captain-profile-location">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
-                </svg>
-                <span>{captain.location}</span>
-              </div>
-              <div className="trippy-mates-captain-profile-languages">
-                <strong>Languages:</strong> {captain.languages?.join(', ') || 'N/A'}
-              </div>
-              <div className="trippy-mates-captain-profile-price-large">
-                Starting at <span className="trippy-mates-price-amount">₹{captain.price}/day</span>
-              </div>
-            </div>
-          </div>
+        <div className="trippy-mates-captain-profile-banner-content">
+          <h1 className="trippy-mates-banner-title">MEET YOUR CAPTAIN</h1>
+          <p className="trippy-mates-banner-subtitle">Local . Expert . Verified</p>
+          <p className="trippy-mates-banner-description">
+            Connect with experienced local guides who know their region inside out. Get authentic experiences, hidden gems, and personalized travel guidance from verified captains.
+          </p>
         </div>
       </section>
 
-      {/* Details Section */}
+    
       <section className="trippy-mates-captain-profile-details">
         <Container maxWidth="lg">
           <Grid container spacing={4}>
-            <Grid item xs={12} md={8}>
-              <div className="trippy-mates-captain-profile-content">
-                <div className="trippy-mates-profile-section">
-                  <h2 className="trippy-mates-profile-section-title">About</h2>
-                  <p className="trippy-mates-profile-section-text">
-                    {captain.bio || captain.description || 'Experienced local guide with deep knowledge of the region. Passionate about sharing authentic experiences and hidden gems with travelers.'}
-                  </p>
+            {/* Profile Data & About - md-8 */}
+            <Grid size={{xs: 12, md: 8}}>
+              <div className="trippy-mates-captain-profile-content-wrapper">
+                {/* Profile Card */}
+                <div className="trippy-mates-captain-profile-card-main">
+                  <div className="trippy-mates-captain-profile-header-card">
+                    <div className="trippy-mates-captain-profile-avatar-card">
+                      <img src={captain.image} alt={captain.name} />
+                      {captain.verified && (
+                        <div className="trippy-mates-verified-badge-card">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="trippy-mates-captain-profile-info-card">
+                      <div className="trippy-mates-captain-badge-rating-card">
+                        {captain.badge && (
+                          <span className={`trippy-mates-badge-card trippy-mates-badge-${captain.badgeColor}`}>
+                            {captain.badge}
+                          </span>
+                        )}
+                        <div className="trippy-mates-captain-rating-card">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fbbf24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                          <span>{captain.rating}</span>
+                        </div>
+                      </div>
+                      <h1 className="trippy-mates-captain-name-card">{captain.name}</h1>
+                      <div className="trippy-mates-captain-location-card">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                        </svg>
+                        <span>{captain.location}</span>
+                      </div>
+                      <div className="trippy-mates-captain-languages-card">
+                        <strong>Languages:</strong> {captain.languages?.join(', ') || 'N/A'}
+                      </div>
+                      <div className="trippy-mates-captain-price-card">
+                        Starting at <span className="trippy-mates-price-card-highlight">₹{captain.price}/day</span>
+                      </div>
+
+
+                    {unavailableDates.length > 0 && (
+                    <div className="trippy-mates-profile-section">
+                      <h2 className="trippy-mates-profile-section-title">Reserved Dates</h2>
+                      <div className="trippy-mates-unavailable-dates">
+                        {unavailableDates.map((date, idx) => (
+                          <span key={idx} className="trippy-mates-unavailable-date-badge">
+                            {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                    </div>
+
+
+                  </div>
+                  
                 </div>
 
-                <div className="trippy-mates-profile-section">
-                  <h2 className="trippy-mates-profile-section-title">Expertise</h2>
-                  <div className="trippy-mates-expertise-tags-large">
-                    {captain.expertise?.map((exp, idx) => (
-                      <span key={idx} className="trippy-mates-expertise-tag-large">{exp}</span>
-                    ))}
-                  </div>
-                </div>
-
-                {captain.specializations && captain.specializations.length > 0 && (
+                <div className="trippy-mates-captain-profile-content">
                   <div className="trippy-mates-profile-section">
-                    <h2 className="trippy-mates-profile-section-title">Specializations</h2>
-                    <ul className="trippy-mates-specializations-list">
-                      {captain.specializations.map((spec, idx) => (
-                        <li key={idx}>{spec}</li>
-                      ))}
-                    </ul>
+                    <h2 className="trippy-mates-profile-section-title">About</h2>
+                    <p className="trippy-mates-profile-section-text">
+                      {captain.bio || captain.description || 'Experienced local guide with deep knowledge of the region. Passionate about sharing authentic experiences and hidden gems with travelers.'}
+                    </p>
                   </div>
-                )}
 
-                {unavailableDates.length > 0 && (
                   <div className="trippy-mates-profile-section">
-                    <h2 className="trippy-mates-profile-section-title">Unavailable Dates</h2>
-                    <div className="trippy-mates-unavailable-dates">
-                      {unavailableDates.map((date, idx) => (
-                        <span key={idx} className="trippy-mates-unavailable-date-badge">
-                          {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
+                    <h2 className="trippy-mates-profile-section-title">Expertise</h2>
+                    <div className="trippy-mates-expertise-tags-large">
+                      {captain.expertise?.map((exp, idx) => (
+                        <span key={idx} className="trippy-mates-expertise-tag-large">{exp}</span>
                       ))}
                     </div>
                   </div>
-                )}
+
+                  {captain.specializations && captain.specializations.length > 0 && (
+                    <div className="trippy-mates-profile-section">
+                      <h2 className="trippy-mates-profile-section-title">Specializations</h2>
+                      <ul className="trippy-mates-specializations-list">
+                        {captain.specializations.map((spec, idx) => (
+                          <li key={idx}>{spec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+             
+
+                </div>
               </div>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+
+            <Grid size={{xs: 12, md: 4}}>
               <div className="trippy-mates-captain-booking-card">
                 <h3 className="trippy-mates-booking-card-title">Book This Captain</h3>
                 <div className="trippy-mates-booking-card-price">
@@ -248,7 +393,16 @@ export default function CaptainProfilePage() {
                 </div>
                 <button 
                   className="trippy-mates-booking-card-btn"
-                  onClick={() => setShowBookingModal(true)}
+                  onClick={() => {
+                    setShowBookingModal(true);
+                    setSelectedUnavailableDates([]);
+                    setDateErrors({ startDate: '', endDate: '' });
+                    // Fetch all unavailable dates when modal opens
+                    if (unavailableDates.length > 0) {
+                      // Show all unavailable dates initially
+                      setSelectedUnavailableDates(unavailableDates);
+                    }
+                  }}
                 >
                   Book Now
                 </button>
@@ -264,10 +418,58 @@ export default function CaptainProfilePage() {
           <div className="trippy-mates-booking-modal" onClick={(e) => e.stopPropagation()}>
             <div className="trippy-mates-booking-modal-header">
               <h2>Book Captain - {captain.name}</h2>
-              <button className="trippy-mates-booking-modal-close" onClick={() => setShowBookingModal(false)}>
+              <button className="trippy-mates-booking-modal-close" onClick={() => {
+                setShowBookingModal(false);
+                setSelectedUnavailableDates([]);
+                setDateErrors({ startDate: '', endDate: '' });
+              }}>
                 ×
               </button>
             </div>
+            {/* Show unavailable dates below title */}
+            {selectedUnavailableDates.length > 0 && (
+              <div style={{
+                backgroundColor: '#fef2f2',
+                border: '2px solid #dc2626',
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                margin: '1rem 1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                  </svg>
+                  <strong style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                    Captain is not available on the following dates:
+                  </strong>
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '0.5rem'
+                }}>
+                  {selectedUnavailableDates.map((date, idx) => (
+                    <span 
+                      key={idx}
+                      style={{
+                        backgroundColor: '#fee2e2',
+                        color: '#991b1b',
+                        padding: '0.375rem 0.75rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: '500',
+                        border: '1px solid #fecaca'
+                      }}
+                    >
+                      {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <form className="trippy-mates-booking-form" onSubmit={handleBookingSubmit}>
               <div className="trippy-mates-booking-form-group">
                 <label>Destination / Where to go <span className="required">*</span></label>
@@ -286,22 +488,158 @@ export default function CaptainProfilePage() {
                   <input
                     type="date"
                     value={bookingForm.startDate}
-                    onChange={(e) => setBookingForm({ ...bookingForm, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value;
+                      
+                      // Check if selected date is unavailable
+                      if (selectedDate && isDateUnavailable(selectedDate)) {
+                        setDateErrors(prev => ({ ...prev, startDate: 'This date is not available. Please select a different date.' }));
+                        setBookingForm({ ...bookingForm, startDate: '' });
+                        return;
+                      }
+                      
+                      setDateErrors(prev => ({ ...prev, startDate: '' }));
+                      setBookingForm({ ...bookingForm, startDate: selectedDate });
+                      
+                      // Always keep showing all unavailable dates - don't clear them
+                      if (unavailableDates.length > 0) {
+                        setSelectedUnavailableDates(unavailableDates);
+                      }
+                      
+                      // Check availability when dates are selected (for validation only)
+                      if (selectedDate && bookingForm.endDate) {
+                        checkCaptainAvailability(selectedDate, bookingForm.endDate);
+                      }
+                    }}
                     min={new Date().toISOString().split('T')[0]}
                     required
+                    style={{
+                      borderColor: dateErrors.startDate ? '#dc2626' : (bookingForm.startDate && isDateUnavailable(bookingForm.startDate) ? '#dc2626' : undefined),
+                      borderWidth: dateErrors.startDate || (bookingForm.startDate && isDateUnavailable(bookingForm.startDate)) ? '2px' : undefined
+                    }}
                   />
+                  {dateErrors.startDate && (
+                    <span style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                      {dateErrors.startDate}
+                    </span>
+                  )}
+                 
                 </div>
                 <div className="trippy-mates-booking-form-group">
                   <label>End Date <span className="required">*</span></label>
                   <input
                     type="date"
                     value={bookingForm.endDate}
-                    onChange={(e) => setBookingForm({ ...bookingForm, endDate: e.target.value })}
+                    onChange={(e) => {
+                      const selectedDate = e.target.value;
+                      
+                      // Check if selected date is unavailable
+                      if (selectedDate && isDateUnavailable(selectedDate)) {
+                        setDateErrors(prev => ({ ...prev, endDate: 'This date is not available. Please select a different date.' }));
+                        setBookingForm({ ...bookingForm, endDate: '' });
+                        return;
+                      }
+                      
+                      // Check if any date in the range is unavailable
+                      if (bookingForm.startDate && selectedDate) {
+                        const start = new Date(bookingForm.startDate);
+                        const end = new Date(selectedDate);
+                        const unavailableInRange = selectedUnavailableDates.filter(dateStr => {
+                          const date = new Date(dateStr);
+                          return date >= start && date <= end;
+                        });
+                        
+                        if (unavailableInRange.length > 0) {
+                          setDateErrors(prev => ({ 
+                            ...prev, 
+                            endDate: `Selected range includes ${unavailableInRange.length} unavailable date(s). Please choose a different range.` 
+                          }));
+                          setBookingForm({ ...bookingForm, endDate: '' });
+                          return;
+                        }
+                      }
+                      
+                      setDateErrors(prev => ({ ...prev, endDate: '' }));
+                      setBookingForm({ ...bookingForm, endDate: selectedDate });
+                      
+                      // Always keep showing all unavailable dates - don't clear them
+                      if (unavailableDates.length > 0) {
+                        setSelectedUnavailableDates(unavailableDates);
+                      }
+                      
+                      // Check availability when dates are selected (for validation only)
+                      if (bookingForm.startDate && selectedDate) {
+                        checkCaptainAvailability(bookingForm.startDate, selectedDate);
+                      }
+                    }}
                     min={bookingForm.startDate || new Date().toISOString().split('T')[0]}
                     required
+                    style={{
+                      borderColor: dateErrors.endDate ? '#dc2626' : (bookingForm.endDate && isDateUnavailable(bookingForm.endDate) ? '#dc2626' : undefined),
+                      borderWidth: dateErrors.endDate || (bookingForm.endDate && isDateUnavailable(bookingForm.endDate)) ? '2px' : undefined
+                    }}
                   />
+                  {dateErrors.endDate && (
+                    <span style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                      {dateErrors.endDate}
+                    </span>
+                  )}
+                 
                 </div>
               </div>
+              
+              {/* Visual indicator for unavailable dates in selected range */}
+              {bookingForm.startDate && bookingForm.endDate && selectedUnavailableDates.length > 0 && (
+                (() => {
+                  const start = new Date(bookingForm.startDate);
+                  const end = new Date(bookingForm.endDate);
+                  const unavailableInRange = selectedUnavailableDates.filter(dateStr => {
+                    const date = new Date(dateStr);
+                    return date >= start && date <= end;
+                  });
+                  
+                  if (unavailableInRange.length > 0) {
+                    return (
+                      <div style={{
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '0.5rem',
+                        padding: '0.75rem',
+                        marginTop: '0.5rem',
+                        marginBottom: '0.5rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                          </svg>
+                          <strong style={{ color: '#dc2626', fontSize: '0.8125rem' }}>
+                            {unavailableInRange.length} unavailable date(s) in selected range:
+                          </strong>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                          {unavailableInRange.map((date, idx) => (
+                            <span 
+                              key={idx}
+                              style={{
+                                backgroundColor: '#fee2e2',
+                                color: '#991b1b',
+                                padding: '0.25rem 0.5rem',
+                                borderRadius: '0.25rem',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                border: '1px solid #fecaca'
+                              }}
+                            >
+                              {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()
+              )}
 
               <div className="trippy-mates-booking-form-group">
                 <label>Number of Days</label>
@@ -363,7 +701,7 @@ export default function CaptainProfilePage() {
                   Cancel
                 </button>
                 <button type="submit" className="trippy-mates-booking-submit-btn" disabled={bookingLoading}>
-                  {bookingLoading ? 'Processing...' : 'Confirm Booking'}
+                  {bookingLoading ? 'Processing...' : 'Proceed'}
                 </button>
               </div>
             </form>

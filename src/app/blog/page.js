@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from "react";
-import { Grid } from "@mui/material";
+import { Grid, Skeleton } from "@mui/material";
 import Link from "next/link";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Autoplay } from 'swiper/modules';
@@ -310,7 +310,8 @@ function BlogPageContent() {
               return (
                 <div
                   key={cat.value}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     setSelectedCategory(cat.value);
                     const params = new URLSearchParams(searchParams.toString());
                     if (cat.value === 'all') {
@@ -318,7 +319,17 @@ function BlogPageContent() {
                     } else {
                       params.set('category', cat.value);
                     }
-                    router.push(`/blog?${params.toString()}`);
+                    // Update URL without scrolling to top
+                    const newUrl = `/blog?${params.toString()}`;
+                    window.history.pushState({ ...window.history.state }, '', newUrl);
+                    
+                    // Scroll to blog posts section smoothly
+                    setTimeout(() => {
+                      const blogSection = document.getElementById('blog-posts-section');
+                      if (blogSection) {
+                        blogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 50);
                   }}
                   style={{
                     background: isSelected ? 'white' : 'transparent',
@@ -357,11 +368,41 @@ function BlogPageContent() {
       )}
 
       {/* Top Blog Posts Section */}
-      <section style={{ padding: '0 6rem 4rem 6rem' }}>
+      <section id="blog-posts-section" style={{ padding: '0 6rem 4rem 6rem' }}>
         {loading && (
-          <div style={{ textAlign: 'center', padding: '3rem' }}>
-            <p>Loading blog posts...</p>
-          </div>
+          <Grid container spacing={4}>
+            {[...new Array(9)].map((_, idx) => (
+              <Grid size={{ xs: 12, md: 4 }} key={idx}>
+                <div style={{
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  minHeight: '500px',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: 'white'
+                }}>
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={250}
+                    sx={{
+                      bgcolor: '#e2e8f0',
+                    }}
+                    animation="wave"
+                  />
+                  <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Skeleton variant="text" width="30%" height={24} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={32} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="90%" height={20} sx={{ mb: 1.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="40%" height={20} sx={{ mt: 'auto', bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
+                </div>
+              </Grid>
+            ))}
+          </Grid>
         )}
         {error && (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'red' }}>
@@ -380,8 +421,9 @@ function BlogPageContent() {
             </p>
           </div>
         )}
-        <Grid container spacing={4}>
-          {displayBlogPosts.map((post) => (
+        {!loading && !error && displayBlogPosts.length > 0 && (
+          <Grid container spacing={4}>
+            {displayBlogPosts.map((post) => (
             <Grid size={{ xs: 12, md: 4 }} key={post._id || post.id}>
               <Link href={`/blog/${post._id || post.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{
@@ -543,10 +585,42 @@ function BlogPageContent() {
             </Grid>
           ))}
         </Grid>
+        )}
       </section>
 
       {/* Articles Section - Middle 9 Cards */}
       <section style={{ padding: '80px 6rem', backgroundColor: '#f8fafc' }}>
+        {loading && (
+          <Grid container spacing={3}>
+            {[...new Array(9)].map((_, idx) => (
+              <Grid size={{xs:12, sm:6, md:4}} key={idx}>
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  height: '100%'
+                }}>
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={200}
+                    sx={{
+                      bgcolor: '#e2e8f0',
+                    }}
+                    animation="wave"
+                  />
+                  <div style={{ padding: '1.5rem' }}>
+                    <Skeleton variant="text" width="40%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="80%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
+                </div>
+              </Grid>
+            ))}
+          </Grid>
+        )}
         {!loading && displayArticles.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <p style={{ 
@@ -559,8 +633,9 @@ function BlogPageContent() {
             </p>
           </div>
         )}
-        <Grid container spacing={3}>
-          {displayArticles.map((article) => (
+        {!loading && displayArticles.length > 0 && (
+          <Grid container spacing={3}>
+            {displayArticles.map((article) => (
             <Grid size={{xs:12, sm:6, md:4}} key={article._id || article.id}>
               <Link href={`/blog/${article._id || article.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{
@@ -665,6 +740,7 @@ function BlogPageContent() {
             </Grid>
           ))}
         </Grid>
+        )}
       </section>
 
       {/* Testimonials Section - Carousel */}
@@ -736,6 +812,31 @@ function BlogPageContent() {
             loop={true}
             style={{ paddingBottom: '3rem', paddingTop: '3rem', height: 'auto' }}
           >
+            {loading && (
+              <>
+                {[...new Array(3)].map((_, idx) => (
+                  <SwiperSlide key={idx} style={{ height: 'auto', display: 'flex', alignItems: 'stretch' }}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '28px',
+                      padding: '2.75rem',
+                      minHeight: '300px',
+                      height: '100%',
+                      width: '100%',
+                      marginTop: '3rem'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-50px', marginBottom: '1.5rem' }}>
+                        <Skeleton variant="circular" width={100} height={100} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                      </div>
+                      <Skeleton variant="text" width="80%" height={24} sx={{ mx: 'auto', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="90%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mx: 'auto', bgcolor: '#e2e8f0' }} animation="wave" />
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </>
+            )}
             {displayTestimonials.length === 0 && !loading && (
               <div style={{ textAlign: 'center', padding: '3rem' }}>
                 <p style={{ 
@@ -748,7 +849,7 @@ function BlogPageContent() {
                 </p>
               </div>
             )}
-            {displayTestimonials.map((testimonial) => (
+            {!loading && displayTestimonials.map((testimonial) => (
                 <SwiperSlide key={testimonial.id || testimonial._id} style={{ height: 'auto', display: 'flex', alignItems: 'stretch' }}>
                   <div style={{
                     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)',
@@ -1013,6 +1114,25 @@ function BlogPageContent() {
             Frequently Asked Questions
           </h2>
 
+          {loading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {[...new Array(5)].map((_, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    border: '2px solid #e5e7eb',
+                    padding: '1.5rem'
+                  }}
+                >
+                  <Skeleton variant="text" width="80%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                  <Skeleton variant="text" width="90%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                </div>
+              ))}
+            </div>
+          )}
           {displayFAQs.length === 0 && !loading && (
             <div style={{ textAlign: 'center', padding: '3rem' }}>
               <p style={{ 
@@ -1026,7 +1146,7 @@ function BlogPageContent() {
             </div>
           )}
 
-          {displayFAQs.length > 0 && (
+          {!loading && displayFAQs.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {displayFAQs.map((faq) => (
                 <div

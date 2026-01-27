@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Grid, useMediaQuery, useTheme } from "@mui/material";
+import { Grid, useMediaQuery, useTheme, Skeleton } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
@@ -18,8 +18,8 @@ export default function CommunityPage() {
   const [selectedDate, setSelectedDate] = useState('any');
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [sortBy, setSortBy] = useState('most-popular');
-  const [joinedTrips, setJoinedTrips] = useState(new Set()); // Approved trips
-  const [pendingTrips, setPendingTrips] = useState(new Set()); // Pending approval trips
+  const [joinedTrips, setJoinedTrips] = useState(new Set()); 
+  const [pendingTrips, setPendingTrips] = useState(new Set()); 
   const [showFindCommunity, setShowFindCommunity] = useState(false);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [tripImage, setTripImage] = useState(null);
@@ -48,7 +48,7 @@ export default function CommunityPage() {
     try {
       setLoading(true);
       
-      // Fetch upcoming trips
+    
       const upcomingResponse = await fetch(`${API_BASE_URL}/api/user/community-trip/all?status=upcoming&limit=3`);
       const upcomingResult = await upcomingResponse.json();
       
@@ -414,8 +414,52 @@ export default function CommunityPage() {
           </div>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-              <p style={{ color: '#64748b' }}>Loading upcoming trips...</p>
+            <div style={{ position: 'relative', padding: isMobile ? '1rem 0' : '2rem 0' }}>
+              <Swiper
+                modules={[Navigation]}
+                grabCursor={true}
+                centeredSlides={false}
+                slidesPerView={isMobile ? 1 : isTablet ? 2 : 3}
+                spaceBetween={isMobile ? 20 : isTablet ? 20 : 30}
+                navigation={true}
+                loop={false}
+                style={{
+                  padding: isMobile ? '1rem 0 3rem 0' : '2rem 0 4rem 0'
+                }}
+              >
+                {[...new Array(3)].map((_, idx) => (
+                  <SwiperSlide key={idx} style={{ height: 'auto' }}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '20px',
+                      border: '1px solid #e5e7eb',
+                      overflow: 'visible',
+                      height: isMobile ? '480px' : '420px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      padding: '1.5rem'
+                    }}>
+                      <Skeleton
+                        variant="rectangular"
+                        width="100%"
+                        height={isMobile ? 300 : 240}
+                        sx={{
+                          borderRadius: '12px',
+                          bgcolor: '#e2e8f0',
+                          mb: 2
+                        }}
+                        animation="wave"
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-60px', marginBottom: '1rem' }}>
+                        <Skeleton variant="circular" width={90} height={90} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                      </div>
+                      <Skeleton variant="text" width="70%" height={24} sx={{ mx: 'auto', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="50%" height={20} sx={{ mx: 'auto', mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mx: 'auto', bgcolor: '#e2e8f0' }} animation="wave" />
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
             </div>
           ) : (
           <div style={{ position: 'relative', padding: isMobile ? '1rem 0' : '2rem 0' }}>
@@ -693,9 +737,39 @@ export default function CommunityPage() {
           </h2>
 
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-              <p style={{ color: 'white' }}>Loading formed trips...</p>
-            </div>
+            <Grid container rowSpacing={5} columnSpacing={5}>
+              {[...new Array(6)].map((_, idx) => (
+                <Grid size={{xs:12, sm:6, md:4}} key={idx}>
+                  <div style={{
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height={280}
+                      sx={{
+                        bgcolor: '#e2e8f0',
+                      }}
+                      animation="wave"
+                    />
+                    <div style={{ padding: '1.5rem' }}>
+                      <Skeleton variant="text" width="80%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem' }}>
+                        <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="40%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                      </div>
+                    </div>
+                  </div>
+                </Grid>
+              ))}
+            </Grid>
           ) : formedTrips.length === 0 ? (
             <div style={{ 
               textAlign: 'center', 
@@ -722,6 +796,40 @@ export default function CommunityPage() {
                 </p>
               </div>
             </div>
+          ) : loading ? (
+            <Grid container rowSpacing={5} columnSpacing={5}>
+              {[...new Array(6)].map((_, idx) => (
+                <Grid size={{xs:12, sm:6, md:4}} key={idx}>
+                  <div style={{
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height={280}
+                      sx={{
+                        bgcolor: '#e2e8f0',
+                      }}
+                      animation="wave"
+                    />
+                    <div style={{ padding: '1.5rem' }}>
+                      <Skeleton variant="text" width="80%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="60%" height={20} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem' }}>
+                        <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                        <Skeleton variant="text" width="40%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                      </div>
+                    </div>
+                  </div>
+                </Grid>
+              ))}
+            </Grid>
           ) : (
           <Grid container rowSpacing={5} columnSpacing={5}>
           {formedTrips.map((trip) => (

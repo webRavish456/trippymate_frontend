@@ -122,6 +122,8 @@ function LoginForm() {
       if (data.status) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', data.data.token);
+          // Save user to localStorage for persistence
+          localStorage.setItem('user', JSON.stringify(data.data.user));
         }
         // Store user in Redux
         dispatch(setUser(data.data.user));
@@ -157,6 +159,8 @@ function LoginForm() {
       if (data.status) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', data.data.token);
+          // Save user to localStorage for persistence
+          localStorage.setItem('user', JSON.stringify(data.data.user));
         }
         // Store user in Redux
         dispatch(setUser(data.data.user));

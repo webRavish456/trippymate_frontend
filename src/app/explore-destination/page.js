@@ -1,6 +1,6 @@
 'use client';
 
-import { Grid } from "@mui/material";
+import { Grid, Skeleton } from "@mui/material";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -379,8 +379,44 @@ export default function ExploreDesignation() {
         </div>
 
         {loading.popularDestinations ? (
-          <div className="popular-destinations-loading">
-            <p>Loading destinations...</p>
+          <div className="popular-destinations-carousel-wrapper">
+            <Swiper
+              modules={[Navigation]}
+              spaceBetween={24}
+              slidesPerView={1}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                1024: { slidesPerView: 3 },
+                1280: { slidesPerView: 4 }
+              }}
+            >
+              {[...new Array(4)].map((_, idx) => (
+                <SwiperSlide key={idx}>
+                  <div style={{
+                    backgroundColor: 'white',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    height: '100%'
+                  }}>
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height={300}
+                      sx={{
+                        bgcolor: '#e2e8f0',
+                      }}
+                      animation="wave"
+                    />
+                    <div style={{ padding: '1.5rem' }}>
+                      <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="100%" height={20} sx={{ mb: 0.5, bgcolor: '#e2e8f0' }} animation="wave" />
+                      <Skeleton variant="text" width="80%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                    </div>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         ) : popularDestinations.length > 0 ? (
           <div className="popular-destinations-carousel-wrapper">
@@ -515,13 +551,38 @@ export default function ExploreDesignation() {
               </button>
 
               {loading.categories ? (
-                <div className="pick-your-type-cards">
-                  <div className="trip-type-card">
-                    <div className="trip-type-card-content">
-                      <p>Loading...</p>
-                    </div>
-                  </div>
-                </div>
+                <Swiper
+                  modules={[Navigation]}
+                  spaceBetween={20}
+                  slidesPerView={1}
+                  breakpoints={{
+                    640: { slidesPerView: 2 },
+                    1024: { slidesPerView: 3 },
+                    1280: { slidesPerView: 4 }
+                  }}
+                  className="pick-your-type-cards"
+                >
+                  {[...new Array(4)].map((_, idx) => (
+                    <SwiperSlide key={idx}>
+                      <div className="trip-type-card">
+                        <Skeleton
+                          variant="rectangular"
+                          width="100%"
+                          height={200}
+                          sx={{
+                            borderRadius: '16px',
+                            bgcolor: '#e2e8f0',
+                          }}
+                          animation="wave"
+                        />
+                        <div className="trip-type-card-content" style={{ padding: '1.5rem' }}>
+                          <Skeleton variant="text" width="60%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                          <Skeleton variant="text" width="80%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                        </div>
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
               ) : categories.length > 0 ? (
                 <Swiper
                   onSwiper={(swiper) => {
@@ -754,12 +815,32 @@ export default function ExploreDesignation() {
 
         {loading.months ? (
           <div className="btv-carousel-wrapper">
-            <div className="btv-card">
-              <div className="btv-card-overlay"></div>
-              <div className="btv-card-content">
-                <p>Loading...</p>
-              </div>
-            </div>
+            <Swiper
+              modules={[Navigation]}
+              spaceBetween={24}
+              slidesPerView={1}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                1024: { slidesPerView: 3 }
+              }}
+            >
+              {[...new Array(3)].map((_, idx) => (
+                <SwiperSlide key={idx}>
+                  <div className="btv-card">
+                    <Skeleton
+                      variant="rectangular"
+                      width="100%"
+                      height={400}
+                      sx={{
+                        borderRadius: '20px',
+                        bgcolor: '#e2e8f0',
+                      }}
+                      animation="wave"
+                    />
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
           </div>
         ) : allDestinations.length > 0 || months.length > 0 ? (
           (() => {
@@ -887,13 +968,23 @@ export default function ExploreDesignation() {
         </div>
         {loading.regions ? (
           <div className="region-grid">
-            <div className="region-card">
-              <div className="region-card-inner">
-                <div className="region-content">
-                  <p>Loading...</p>
+            {[...new Array(4)].map((_, idx) => (
+              <div className="region-card" key={idx}>
+                <div className="region-card-inner">
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height="100%"
+                    sx={{
+                      borderRadius: '20px',
+                      bgcolor: '#e2e8f0',
+                      minHeight: '300px'
+                    }}
+                    animation="wave"
+                  />
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         ) : regions.length > 0 ? (
           <div className="region-grid">
@@ -964,13 +1055,27 @@ export default function ExploreDesignation() {
         </div>
         {loading.activities ? (
           <div className="adv-grid">
-            <div className="adv-card">
-              <div className="adv-card-inner">
-                <div className="adv-content">
-                  <p>Loading...</p>
+            {[...new Array(4)].map((_, idx) => (
+              <div className="adv-card" key={idx}>
+                <div className="adv-card-inner">
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={250}
+                    sx={{
+                      borderRadius: '20px',
+                      bgcolor: '#e2e8f0',
+                      mb: 2
+                    }}
+                    animation="wave"
+                  />
+                  <div className="adv-content" style={{ padding: '1.5rem' }}>
+                    <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         ) : activities.length > 0 ? (
           <div className="adv-grid">
@@ -1032,40 +1137,51 @@ export default function ExploreDesignation() {
           <div className="culture-separator"></div>
         </div>
         {loading.heritage ? (
-          <div className="culture-grid">
-            <div className="culture-card">
-              <div className="culture-card-inner">
-                <div className="culture-content">
-                  <p>Loading...</p>
+          <div className="adv-grid">
+            {[...new Array(4)].map((_, idx) => (
+              <div className="adv-card" key={idx}>
+                <div className="adv-card-inner">
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={250}
+                    sx={{
+                      borderRadius: '20px',
+                      bgcolor: '#e2e8f0',
+                      mb: 2
+                    }}
+                    animation="wave"
+                  />
+                  <div className="adv-content" style={{ padding: '1.5rem' }}>
+                    <Skeleton variant="text" width="70%" height={28} sx={{ mb: 1, bgcolor: '#e2e8f0' }} animation="wave" />
+                    <Skeleton variant="text" width="100%" height={20} sx={{ bgcolor: '#e2e8f0' }} animation="wave" />
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         ) : heritage.length > 0 ? (
-          <div className="culture-grid">
-            {heritage.map((item, i) => (
-              <div className={`culture-card culture-card-${i + 1}`} key={i}>
-                <div className="culture-card-inner">
-                  <div className="culture-image-wrapper">
-                    <img src={item.image} alt={item.name} />
-                    <div className="culture-color-overlay"></div>
-                    <div className="culture-pattern-overlay"></div>
+          <div className="adv-grid">
+            {heritage.map((heritageItem, i) => (
+              <div className="adv-card" key={i}>
+                <div className="adv-card-inner">
+                  <div className="adv-image-wrapper">
+                    <img src={heritageItem.image} alt={heritageItem.name} />
+                    <div className="adv-shine-effect"></div>
                   </div>
-                  <div className="culture-floating-badge">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  <div className="culture-content">
-                    <div className="culture-number">0{i + 1}</div>
-                    <h3 className="culture-name">{item.name}</h3>
-                    <div className="culture-divider"></div>
+                  <div className="adv-content">
+                    <div className="adv-icon-wrapper">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <h3 className="adv-name">{heritageItem.name}</h3>
                     <button 
-                      className="culture-explore-btn"
+                      className="adv-explore-btn"
                       onClick={() => {
-                        const heritageName = (item.name || '').toLowerCase().replace(/\s+/g, '-');
+                        const heritageName = (heritageItem.name || '').toLowerCase().replace(/\s+/g, '-');
                         router.push(`/explore-destination/heritage/${heritageName}`);
                       }}
                     >
@@ -1075,16 +1191,15 @@ export default function ExploreDesignation() {
                       </svg>
                     </button>
                   </div>
-                  <div className="culture-corner-accent"></div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="culture-grid">
-            <div className="culture-card">
-              <div className="culture-card-inner">
-                <div className="culture-content">
+          <div className="adv-grid">
+            <div className="adv-card">
+              <div className="adv-card-inner">
+                <div className="adv-content">
                   <p>No data available</p>
                 </div>
               </div>
@@ -1093,12 +1208,10 @@ export default function ExploreDesignation() {
         )}
       </div>
     </section>
-
-
-      </main>
-    </div>  
-        
+  </main>
+</div>
         </>
-    )
+    );
 }
+
 

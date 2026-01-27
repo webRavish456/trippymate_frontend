@@ -1,11 +1,48 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSelector, useDispatch } from "react-redux";
 import { Grid } from "@mui/material";
 import { updateUser } from "@/store/actions/userActions";
 import { API_BASE_URL } from '@/lib/config';
+
+// Optimized Avatar Component - no mounted state needed
+function ProfileAvatar({ profilePicture, userName, userEmail }) {
+  const [imageError, setImageError] = useState(false);
+
+  // Calculate initials directly from props
+  const getInitials = () => {
+    if (userName) {
+      return userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (userEmail) {
+      return userEmail[0].toUpperCase();
+    }
+    return 'U';
+  };
+
+  const initials = getInitials();
+  const showImage = profilePicture && profilePicture.trim() !== '' && !imageError;
+
+  return (
+    <>
+      {showImage ? (
+        <img
+          src={profilePicture}
+          alt={userName || 'Profile'}
+          className="profile-avatar-image"
+          onError={() => setImageError(true)}
+          loading="lazy"
+        />
+      ) : (
+        <span className="profile-avatar-initials">
+          {initials}
+        </span>
+      )}
+    </>
+  );
+}
 
 export default function MyProfilePage() {
   const router = useRouter();
@@ -25,13 +62,30 @@ export default function MyProfilePage() {
     pincode: '',
   });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserProfile();
   }, []);
 
+  // Helper function to set form data from user object
+  const setFormDataFromUser = (userData) => {
+    setFormData({
+      name: userData.name || '',
+      email: userData.email || '',
+      phone: userData.phone || '',
+      dateOfBirth: userData.dateOfBirth || '',
+      gender: userData.gender || '',
+      address: userData.address || '',
+      city: userData.city || '',
+      state: userData.state || '',
+      pincode: userData.pincode || '',
+    });
+  };
+
   const fetchUserProfile = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         router.push('/auth/login');
@@ -48,54 +102,25 @@ export default function MyProfilePage() {
 
       if (result.status && result.data) {
         const userData = result.data;
-        setFormData({
-          name: userData.name || '',
-          email: userData.email || '',
-          phone: userData.phone || '',
-          dateOfBirth: userData.dateOfBirth || '',
-          gender: userData.gender || '',
-          address: userData.address || '',
-          city: userData.city || '',
-          state: userData.state || '',
-          pincode: userData.pincode || '',
-        });
+        setFormDataFromUser(userData);
         
-        // Update Redux store
-        if (result.data.stats) {
-          dispatch(updateUser({ ...userData, stats: result.data.stats }));
-        }
-      } else {
+        // Update Redux store with complete user data including profilePicture
+        dispatch(updateUser({ 
+          ...userData, 
+          stats: result.data.stats || userData.stats
+        }));
+      } else if (user) {
         // Fallback to Redux user data
-        if (user) {
-          setFormData({
-            name: user.name || '',
-            email: user.email || '',
-            phone: user.phone || '',
-            dateOfBirth: user.dateOfBirth || '',
-            gender: user.gender || '',
-            address: user.address || '',
-            city: user.city || '',
-            state: user.state || '',
-            pincode: user.pincode || '',
-          });
-        }
+        setFormDataFromUser(user);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       // Fallback to Redux user data
       if (user) {
-        setFormData({
-          name: user.name || '',
-          email: user.email || '',
-          phone: user.phone || '',
-          dateOfBirth: user.dateOfBirth || '',
-          gender: user.gender || '',
-          address: user.address || '',
-          city: user.city || '',
-          state: user.state || '',
-          pincode: user.pincode || '',
-        });
+        setFormDataFromUser(user);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,12 +183,166 @@ export default function MyProfilePage() {
     }
   };
 
-  const getUserInitials = () => {
-    if (formData.name) {
-      return formData.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    return 'U';
-  };
+  // Get profile picture from multiple sources - ensure it's always available
+  const profilePicture = useMemo(() => {
+    // Priority: Redux user > API data (if available)
+    const pic = user?.profilePicture || user?.picture || null;
+    return pic;
+  }, [user?.profilePicture, user?.picture]);
+
+  // Profile Skeleton Component
+  const ProfileSkeleton = () => (
+    <div className="packages-page">
+      <div className="profile-page-header">
+        <div className="profile-page-header-container">
+          <div className="profile-skeleton-title" style={{
+            height: '32px',
+            width: '200px',
+            backgroundColor: '#e2e8f0',
+            borderRadius: '8px',
+            marginBottom: '8px',
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }} />
+          <div className="profile-skeleton-subtitle" style={{
+            height: '20px',
+            width: '300px',
+            backgroundColor: '#e2e8f0',
+            borderRadius: '8px',
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }} />
+        </div>
+      </div>
+
+      <section className="packages-details-section">
+        <div className="packages-details-container">
+          <div className="profile-container">
+            <Grid container spacing={3}>
+              <Grid size={{xs: 12, md: 8}}>
+                {/* Profile Header Card Skeleton */}
+                <div className="profile-header-card">
+                  <div className="profile-avatar-section">
+                    <div className="profile-avatar-large" style={{
+                      backgroundColor: '#e2e8f0',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                    <div style={{
+                      width: '120px',
+                      height: '40px',
+                      backgroundColor: '#e2e8f0',
+                      borderRadius: '8px',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                  </div>
+                  <div className="profile-header-info">
+                    <div style={{
+                      height: '28px',
+                      width: '200px',
+                      backgroundColor: '#e2e8f0',
+                      borderRadius: '8px',
+                      marginBottom: '8px',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                    <div style={{
+                      height: '20px',
+                      width: '250px',
+                      backgroundColor: '#e2e8f0',
+                      borderRadius: '8px',
+                      marginBottom: '24px',
+                      animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                    }} />
+                    <div className="profile-stats">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="profile-stat-item">
+                          <div style={{
+                            height: '24px',
+                            width: '30px',
+                            backgroundColor: '#e2e8f0',
+                            borderRadius: '4px',
+                            marginBottom: '4px',
+                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                          }} />
+                          <div style={{
+                            height: '16px',
+                            width: '50px',
+                            backgroundColor: '#e2e8f0',
+                            borderRadius: '4px',
+                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                          }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Skeleton */}
+                <div className="packages-detail-card">
+                  <div style={{
+                    height: '28px',
+                    width: '250px',
+                    backgroundColor: '#e2e8f0',
+                    borderRadius: '8px',
+                    marginBottom: '24px',
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                  }} />
+                  <div className="business-form-grid">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="packages-form-group">
+                        <div style={{
+                          height: '16px',
+                          width: '120px',
+                          backgroundColor: '#e2e8f0',
+                          borderRadius: '4px',
+                          marginBottom: '8px',
+                          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                        }} />
+                        <div style={{
+                          height: '48px',
+                          width: '100%',
+                          backgroundColor: '#e2e8f0',
+                          borderRadius: '8px',
+                          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                        }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Grid>
+
+              <Grid size={{xs: 12, md: 4}}>
+                {/* Account Settings Skeleton */}
+                <div className="account-settings-wrapper">
+                  <div style={{
+                    height: '28px',
+                    width: '180px',
+                    backgroundColor: '#e2e8f0',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                  }} />
+                  <div className="account-settings-list">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} style={{
+                        height: '48px',
+                        width: '100%',
+                        backgroundColor: '#e2e8f0',
+                        borderRadius: '8px',
+                        marginBottom: '8px',
+                        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                      }} />
+                    ))}
+                  </div>
+                </div>
+              </Grid>
+            </Grid>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+
+  if (loading) {
+    return <ProfileSkeleton />;
+  }
 
   return (
     <div className="packages-page">
@@ -200,19 +379,11 @@ export default function MyProfilePage() {
                 <div className="profile-header-card">
                   <div className="profile-avatar-section">
                     <div className="profile-avatar-large">
-                      {user?.profilePicture || user?.picture ? (
-                        <img 
-                          src={user.profilePicture || user.picture} 
-                          alt="Profile"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                      ) : null}
-                      {(!user?.profilePicture && !user?.picture) && (
-                        <span>{getUserInitials()}</span>
-                      )}
+                      <ProfileAvatar
+                        profilePicture={profilePicture}
+                        userName={formData.name || user?.name}
+                        userEmail={formData.email || user?.email}
+                      />
                     </div>
                     <button className="profile-upload-btn">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

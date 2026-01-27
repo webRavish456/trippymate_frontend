@@ -6,33 +6,41 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { setUser, clearUser } from "@/store/actions/userActions";
-import store from "@/store/store";
 import { useMediaQuery } from "@mui/material";
 
 export default function Header() {
   const router = useRouter();
-  const pathname = usePathname();
   const dispatch = useDispatch();
   const { user, isAuthenticated } = useSelector((state) => state.user);
-  
-  // Check if we're on homepage
-  const isHomepage = pathname === '/';
 
   const [showSupportPopup, setShowSupportPopup] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
 
-  const bannerHeightRef = useRef(0);
+  const userMenuRef = useRef(null);
   const isSmScreen = useMediaQuery("(max-width: 768px)");
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   /* ---------- AUTH CHECK ---------- */
   useEffect(() => {
-    setIsMounted(true);
-
     if (typeof window === "undefined") {
       setIsCheckingAuth(false);
       return;
@@ -43,8 +51,18 @@ export default function Header() {
 
     if (token && storedUser) {
       try {
-        dispatch(setUser(JSON.parse(storedUser)));
-      } catch {
+        const userData = JSON.parse(storedUser);
+        // Ensure profilePicture is set from picture if available
+        if (userData && userData.picture && !userData.profilePicture) {
+          userData.profilePicture = userData.picture;
+        }
+        // Ensure profilePicture URL is valid (not empty string)
+        if (userData && userData.profilePicture === '') {
+          userData.profilePicture = null;
+        }
+        dispatch(setUser(userData));
+      } catch (error) {
+        console.error('Error loading user from localStorage:', error);
         dispatch(clearUser());
       }
     } else {
@@ -53,13 +71,6 @@ export default function Header() {
 
     setIsCheckingAuth(false);
   }, [dispatch]);
-
-  /* ---------- SCROLL EFFECT ---------- */
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const getUserInitials = () => {
     if (user?.name) {
@@ -74,28 +85,31 @@ export default function Header() {
     return "U";
   };
 
-  // Determine background based on homepage and scroll
-  const getHeaderBackground = () => {
-    if (isHomepage) {
-      // Fully transparent on homepage
-      return isScrolled ? "rgba(29, 78, 216, 0.95)" : "transparent";
+  const getProfilePictureUrl = () => {
+    const picUrl = user?.profilePicture || user?.picture;
+    if (!picUrl || picUrl.trim() === '') return null;
+
+    try {
+      new URL(picUrl);
+      return picUrl;
+    } catch {
+
+      return null;
     }
-    // Other pages keep original behavior
-    return isScrolled
-      ? "rgba(29, 78, 216, 0.95)"
-      : "rgba(29, 78, 216, 0.3)";
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    dispatch(clearUser());
+    setShowUserMenu(false);
+    router.push('/');
   };
 
   return (
-    <header
-      className={`header ${isHomepage && !isScrolled ? 'header-transparent' : ''}`}
-      style={{
-        background: getHeaderBackground(),
-        borderBottom: isHomepage && !isScrolled ? 'none' : undefined,
-      }}
-    >
+    <header className="header">
       <div className="header-container">
-        {/* LEFT */}
+
         <div className="header-left-section">
           {isSmScreen && (
             <button
@@ -112,7 +126,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* DESKTOP MENU */}
+
         {!isSmScreen && (
           <nav className="header-menu">
             <a href="/trippy-mates">Trippy Mates</a>
@@ -125,11 +139,11 @@ export default function Header() {
           </nav>
         )}
 
-        {/* RIGHT */}
+
         <div className="header-right">
-          {!isMounted || isCheckingAuth ? null : (
+          {isCheckingAuth ? null : (
             <>
-              {/* HELP ICON (DESKTOP) */}
+       
               {!isSmScreen && (
                 <div
                   className="help-dropdown"
@@ -138,7 +152,7 @@ export default function Header() {
                 >
                   <img src="/help.png" alt="Help" className="help-icon" />
 
-                  {/* CALL SUPPORT POPUP */}
+         
                   {showSupportPopup && (
                     <div
                       onClick={(e) => e.stopPropagation()}
@@ -146,13 +160,13 @@ export default function Header() {
                         position: "absolute",
                         top: "45px",
                         right: 0,
-                        background: "#fff",
+                        background: "var(--primary-blue)",
                         borderRadius: "12px",
                         boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
                         minWidth: "320px",
                         padding: "1.25rem",
                         zIndex: 1000,
-                        border: "1px solid #e5e7eb",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
                       }}
                     >
                       {/* CALL */}
@@ -162,19 +176,19 @@ export default function Header() {
                           gap: "12px",
                           paddingBottom: "16px",
                           marginBottom: "16px",
-                          borderBottom: "1px solid #e5e7eb",
+                          borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
                         }}
                       >
                         <div style={{ fontSize: "22px" }}>📞</div>
                         <div>
-                          <div style={{ fontWeight: 700, marginBottom: "6px" }}>
+                          <div style={{ fontWeight: 700, marginBottom: "6px", color: "#fff" }}>
                             Call Support
                           </div>
                           <a
                             href="tel:+911143131313"
                             style={{
                               display: "block",
-                              color: "#1D4ED8",
+                              color: "#fff",
                               fontWeight: 600,
                               textDecoration: "none",
                             }}
@@ -185,7 +199,7 @@ export default function Header() {
                             href="tel:+911143030303"
                             style={{
                               display: "block",
-                              color: "#1D4ED8",
+                              color: "#fff",
                               fontWeight: 600,
                               textDecoration: "none",
                             }}
@@ -199,13 +213,13 @@ export default function Header() {
                       <div style={{ display: "flex", gap: "12px" }}>
                         <div style={{ fontSize: "22px" }}>✉️</div>
                         <div>
-                          <div style={{ fontWeight: 700, marginBottom: "6px" }}>
+                          <div style={{ fontWeight: 700, marginBottom: "6px", color: "#fff" }}>
                             Mail Support
                           </div>
                           <a
                             href="mailto:Care@trippymates.com"
                             style={{
-                              color: "#64748b",
+                              color: "#fff",
                               fontWeight: 600,
                               textDecoration: "none",
                             }}
@@ -221,16 +235,189 @@ export default function Header() {
 
               {/* USER / LOGIN */}
               {isAuthenticated ? (
-                <button
-                  className="header-user-icon"
-                  onClick={() => router.push("/profile")}
-                >
-                  {user?.profilePicture ? (
-                    <img src={user.profilePicture} />
-                  ) : (
-                    <span>{getUserInitials()}</span>
+                <div ref={userMenuRef} style={{ position: 'relative' }}>
+                  <button
+                    className="header-user-icon"
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    aria-label="User menu"
+                  >
+                    {getProfilePictureUrl() ? (
+                      <>
+                        <img 
+                          src={getProfilePictureUrl()} 
+                          alt={user?.name || 'User'}
+                          className="header-avatar-image"
+
+                        />
+                      </>
+                    ) : (
+                      <span className="header-avatar-initials">
+                        {getUserInitials()}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {showUserMenu && (
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        position: "absolute",
+                        top: "50px",
+                        right: 0,
+                        background: "#fff",
+                        borderRadius: "12px",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                        minWidth: "200px",
+                        padding: "0.5rem",
+                        zIndex: 1000,
+                        border: "1px solid #e5e7eb",
+                      }}
+                    >
+                      {/* User Info */}
+                      <div
+                        style={{
+                          padding: "0.75rem",
+                          borderBottom: "1px solid #e5e7eb",
+                          marginBottom: "0.25rem",
+                        }}
+                      >
+                        <div style={{ 
+                          fontWeight: 600, 
+                          fontSize: "0.9375rem",
+                          color: "#1f2937",
+                          marginBottom: "0.25rem"
+                        }}>
+                          {user?.name || 'User'}
+                        </div>
+                        <div style={{ 
+                          fontSize: "0.8125rem",
+                          color: "#6b7280"
+                        }}>
+                          {user?.email || ''}
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <button
+                        onClick={() => {
+                          router.push("/profile");
+                          setShowUserMenu(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          textAlign: "left",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontSize: "0.9375rem",
+                          color: "#374151",
+                          fontWeight: 500,
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "#f3f4f6";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "transparent";
+                        }}
+                      >
+                        My Account
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          router.push("/my-bookings");
+                          setShowUserMenu(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          textAlign: "left",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontSize: "0.9375rem",
+                          color: "#374151",
+                          fontWeight: 500,
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "#f3f4f6";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "transparent";
+                        }}
+                      >
+                        My Booking
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          router.push("/wishlist");
+                          setShowUserMenu(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          textAlign: "left",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontSize: "0.9375rem",
+                          color: "#374151",
+                          fontWeight: 500,
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "#f3f4f6";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "transparent";
+                        }}
+                      >
+                        My Wishlist
+                      </button>
+
+                      <div
+                        style={{
+                          height: "1px",
+                          background: "#e5e7eb",
+                          margin: "0.5rem 0",
+                        }}
+                      />
+
+                      <button
+                        onClick={handleLogout}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          textAlign: "left",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontSize: "0.9375rem",
+                          color: "#dc2626",
+                          fontWeight: 600,
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "#fee2e2";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "transparent";
+                        }}
+                      >
+                        Logout
+                      </button>
+                    </div>
                   )}
-                </button>
+                </div>
               ) : isSmScreen ? (
                 <button
                   className="header-user-icon"
@@ -251,7 +438,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* MOBILE MENU */}
+
       {isSmScreen && mobileMenuOpen && (
         <div className="mobile-menu">
           <nav className="mobile-menu-nav">
@@ -277,13 +464,14 @@ export default function Header() {
         </div>
       )}
 
-      {/* OVERLAY */}
-      {(mobileMenuOpen || showSupportPopup) && (
+
+      {(mobileMenuOpen || showSupportPopup || showUserMenu) && (
         <div
           className="mobile-menu-overlay"
           onClick={() => {
             setMobileMenuOpen(false);
             setShowSupportPopup(false);
+            setShowUserMenu(false);
           }}
         />
       )}

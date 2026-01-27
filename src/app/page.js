@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from "react";
-import { Grid } from "@mui/material";
+import { useRouter } from "next/navigation";
+import { Grid, Skeleton } from "@mui/material";
 import AOS from "aos";
 import { Shadows_Into_Light } from "next/font/google";
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -16,10 +17,13 @@ const shadows = Shadows_Into_Light({
 });
 
 export default function Home() {
+  const router = useRouter();
   const swiperRef = useRef(null);
   const offeringsSwiperRef = useRef(null);
   const [banners, setBanners] = useState([]);
   const [bannerLoading, setBannerLoading] = useState(true);
+  const [adventurePosts, setAdventurePosts] = useState([]);
+  const [adventureLoading, setAdventureLoading] = useState(true);
 
   useEffect(() => {
     AOS.init({
@@ -30,6 +34,7 @@ export default function Home() {
       offset: 100
     });
     fetchBanners();
+    fetchAdventurePosts();
   }, []);
 
   const fetchBanners = async () => {
@@ -48,18 +53,38 @@ export default function Home() {
     }
   };
 
+  const fetchAdventurePosts = async () => {
+    try {
+      setAdventureLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/user/adventure-post/homepage?limit=8`);
+      const data = await response.json();
+      
+      if (data.status && data.data) {
+        setAdventurePosts(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching adventure posts:", error);
+    } finally {
+      setAdventureLoading(false);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center bg-zinc-50 font-sans dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
       <main className="flex w-full flex-col items-center bg-white dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
         {/* Companion Banner Section */}
         <section className="companion-banner-section-dummy">
           {bannerLoading ? (
-            <div className="companion-banner-dummy-wrapper">
-              <div className="companion-banner-dummy-content">
-                <h1 className="companion-banner-dummy-title">TrippyMates</h1>
-                <p className="companion-banner-dummy-subtitle">Your Travel Companion</p>
-              </div>
-            </div>
+            <Skeleton
+              variant="rectangular"
+              width="100%"
+              height="100%"
+              animation="wave"
+              sx={{
+                bgcolor: '#e2e8f0',
+                borderRadius: 0
+              }}
+            />
           ) : banners.length > 0 ? (
             <Swiper
               modules={[Navigation, Autoplay]}
@@ -151,7 +176,13 @@ export default function Home() {
                 <img src="/meet-our-captain.png" alt="Companions" className="companions-image" style={{position:"relative"}} />
                 
          
-                <button className="unforgettable-journey-hire-captain-btn" data-aos="fade-up" data-aos-delay="600">
+                <button 
+                  className="unforgettable-journey-hire-captain-btn" 
+                  data-aos="fade-up" 
+                  data-aos-delay="600"
+                  onClick={() => router.push('/trippy-mates')}
+                  type="button"
+                >
                   Hire a Captain
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -353,7 +384,13 @@ export default function Home() {
 
    
               <div className="how-it-works-cta">
-                <button className="btn how-it-works-button" data-aos="zoom-in" data-aos-delay="700">
+                <button 
+                  className="btn how-it-works-button" 
+                  data-aos="zoom-in" 
+                  data-aos-delay="700"
+                  onClick={() => router.push('/packages')}
+                  type="button"
+                >
                   Plan Your Trip
                   <svg className="how-it-works-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M13 7L18 12L13 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -431,7 +468,14 @@ export default function Home() {
                   Set your destination, dates, and budget — and we'll connect you with travelers who share your vibe.
                 </p>
                 <div className="connect-kind-buttons">
-                  <button className="btn connect-kind-button connect-kind-button-primary" data-aos="fade-right" data-aos-duration="1000" data-aos-delay="600">
+                  <button 
+                    className="btn connect-kind-button connect-kind-button-primary" 
+                    data-aos="fade-right" 
+                    data-aos-duration="1000" 
+                    data-aos-delay="600"
+                    onClick={() => router.push('/crew')}
+                    type="button"
+                  >
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M7 8C8.65685 8 10 6.65685 10 5C10 3.34315 8.65685 2 7 2C5.34315 2 4 3.34315 4 5C4 6.65685 5.34315 8 7 8Z" fill="currentColor"/>
                       <path d="M13 8C14.6569 8 16 6.65685 16 5C16 3.34315 14.6569 2 13 2C11.3431 2 10 3.34315 10 5C10 6.65685 11.3431 8 13 8Z" fill="currentColor"/>
@@ -440,7 +484,14 @@ export default function Home() {
                     </svg>
                     Join a Crew
                   </button>
-                  <button className="btn outline-btn connect-kind-button connect-kind-button-secondary" data-aos="fade-left" data-aos-duration="1000" data-aos-delay="600">
+                  <button 
+                    className="btn outline-btn connect-kind-button connect-kind-button-secondary" 
+                    data-aos="fade-left" 
+                    data-aos-duration="1000" 
+                    data-aos-delay="600"
+                    onClick={() => router.push('/explore-destination')}
+                    type="button"
+                  >
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M10 3V17M3 10H17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
                     </svg>
@@ -736,20 +787,99 @@ export default function Home() {
             </div>
 
             {/* Image Grid */}
-            <div className="trippy-darshan-grid">
-              <img src="/trippy-darshan/trippy-darshan-1.png" alt="Travel moment 1" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="100" />
-              <img src="/trippy-darshan/trippy-darshan-2.png" alt="Travel moment 2" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="200" />
-              <img src="/trippy-darshan/trippy-darshan-3.png" alt="Travel moment 3" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="300" />
-              <img src="/trippy-darshan/trippy-darshan-4.png" alt="Travel moment 4" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="400" />
-              <img src="/trippy-darshan/trippy-darshan-5.png" alt="Travel moment 5" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="100" />
-              <img src="/trippy-darshan/trippy-darshan-6.png" alt="Travel moment 6" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="200" />
-              <img src="/trippy-darshan/trippy-darshan-7.png" alt="Travel moment 7" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="300" />
-              <img src="/trippy-darshan/trippy-darshan-8.png" alt="Travel moment 8" className="trippy-darshan-image" data-aos="zoom-in" data-aos-delay="400" />
-            </div>
+            {adventureLoading ? (
+              <div className="trippy-darshan-grid">
+                {[...new Array(8)].reverse().map((_, index) => (
+                  <Skeleton
+                    key={index}
+                    variant="rectangular"
+                    width="100%"
+                    sx={{
+                      aspectRatio: '1',
+                      borderRadius: '16px',
+                      bgcolor: '#e2e8f0',
+                    }}
+                    animation="wave"
+                  />
+                ))}
+              </div>
+            ) : adventurePosts.length > 0 ? (
+              <div className="trippy-darshan-grid">
+                {[...adventurePosts].reverse().map((post, index) => (
+                  <img
+                    key={post._id || index}
+                    src={post.image}
+                    alt={post.title || `Travel moment ${index + 1}`}
+                    className="trippy-darshan-image"
+                    data-aos="zoom-in"
+                    data-aos-delay={(index % 4) * 100 + 100}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="trippy-darshan-grid" style={{ 
+                gridColumn: '1 / -1',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: '3rem 2rem',
+                minHeight: '400px'
+              }}>
+                <div style={{
+                  maxWidth: '500px',
+                  textAlign: 'center',
+                  padding: '3rem',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '20px',
+                  border: '2px dashed #d1d5db'
+                }}>
+                  <svg 
+                    width="80" 
+                    height="80" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                    style={{ margin: '0 auto 1.5rem', display: 'block', opacity: 0.6 }}
+                  >
+                    <path 
+                      d="M4 16L8.586 11.414C9.367 10.633 10.633 10.633 11.414 11.414L16 16M14 14L15.586 12.414C16.367 11.633 17.633 11.633 18.414 12.414L20 14M14 8H14.01M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z" 
+                      stroke="#6b7280" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <h3 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: '600',
+                    color: '#374151',
+                    marginBottom: '0.75rem',
+                    fontFamily: 'var(--font-family-sans-serif)'
+                  }}>
+                    No Adventures Yet
+                  </h3>
+                  <p style={{
+                    fontSize: '1rem',
+                    color: '#6b7280',
+                    lineHeight: '1.6',
+                    margin: 0,
+                    fontFamily: 'var(--font-family-sans-serif)'
+                  }}>
+                    We're collecting amazing travel moments from our community. Check back soon for inspiring adventures!
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* CTA Button */}
             <div className="trippy-darshan-cta">
-              <button className=" home-btn trippy-darshan-button" data-aos="fade-up" data-aos-delay="500">
+              <button 
+                className=" home-btn trippy-darshan-button" 
+                data-aos="fade-up" 
+                data-aos-delay="500"
+                onClick={() => router.push('/adventure')}
+                type="button"
+              >
                 <img src="/adventure.png" alt="Adventure icon" className="trippy-darshan-button-icon" />
                 View All Adventures
               </button>
@@ -892,7 +1022,14 @@ export default function Home() {
               <h2 className="community-heading" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">Become Part of India's Fastest <br></br> Growing Travel Community.</h2>
             </div>
             <div className="community-bottom-content">
-              <button className="home-btn community-button" data-aos="zoom-in" data-aos-duration="1000" data-aos-delay="400">
+              <button 
+                className="home-btn community-button" 
+                data-aos="zoom-in" 
+                data-aos-duration="1000" 
+                data-aos-delay="400"
+                onClick={() => router.push('/community')}
+                type="button"
+              >
                 Join Our Community
                 <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="community-arrow-icon">
                   <path d="M5 12H19M19 12L14 7M19 12L14 17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>

@@ -135,15 +135,16 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000; /* Increased to ensure it's always on top */
-  background: rgba(29, 78, 216, 0.3); /* Semi-transparent blue */
+  z-index: 1000;
+  background: #ffffff !important; 
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: background 0.3s ease, backdrop-filter 0.3s ease, box-shadow 0.3s ease;
 }
 
 .header-transparent {
-  background: transparent !important;
+  background: #ffffff !important;
   backdrop-filter: blur(80px) !important;
   border-bottom: none !important;
 }
@@ -199,7 +200,7 @@ body {
 }
 
 .header-menu a {
-  color: white;
+  color: var(--primary-blue) !important;
   font-size: 17px;
   font-weight: 500;
   text-decoration: none;
@@ -231,13 +232,15 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  display: block;
+  object-fit: contain;
 }
 
 /* Login Button */
 .login-btn {
   padding: 10px 28px;
-  background: white;
-  color: #0b2347;
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
   font-size: 16px;
   font-weight: 600;
   border: none;
@@ -261,7 +264,7 @@ body {
 .hamburger-menu-btn {
   background: transparent !important;
   border: none !important;
-  color: white !important;
+  color: var(--primary-blue) !important;
   cursor: pointer !important;
   display: flex !important;
   align-items: center !important;
@@ -279,10 +282,40 @@ body {
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+  padding: 0 !important;
+  transition: all 0.2s ease !important;
 }
 
 .header-user-icon:hover {
-  opacity: 0.8 !important;
+  opacity: 0.9 !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  transform: scale(1.05) !important;
+}
+
+.header-avatar-image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+  display: block !important;
+}
+
+.header-avatar-initials {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  text-transform: uppercase !important;
 }
 
 /* Mobile Menu */
@@ -291,9 +324,9 @@ body {
   top: 100% !important;
   left: 0 !important;
   right: 0 !important;
-  background: rgba(29, 78, 216, 0.98) !important;
+  background: #ffffff !important;
   backdrop-filter: blur(20px) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
   padding: 20px 2rem !important;
   z-index: 1000 !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
@@ -309,7 +342,7 @@ body {
 }
 
 .mobile-menu-nav a {
-  color: white !important;
+  color: var(--primary-blue) !important;
   font-size: 16px !important;
   font-weight: 500 !important;
   text-decoration: none !important;
@@ -357,8 +390,8 @@ body {
   padding: 14px 24px !important;
   font-size: 16px !important;
   font-weight: 600 !important;
-  background: white !important;
-  color: #0b2347 !important;
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
   border: none !important;
   border-radius: 40px !important;
   cursor: pointer !important;
@@ -376,7 +409,6 @@ body {
   right: 0 !important;
   bottom: 0 !important;
   z-index: 999 !important;
-  background: rgba(0, 0, 0, 0.3) !important;
 }
 
 @media (max-width: 1200px) {
@@ -442,10 +474,21 @@ body {
   .header-user-icon {
     width: 36px !important;
     height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
   }
 
   .header-user-icon svg {
     font-size: 24px !important;
+  }
+
+  .header-avatar-image {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .header-avatar-initials {
+    font-size: 14px !important;
   }
 
   .help-dropdown {
@@ -16419,7 +16462,7 @@ padding: 80px 0px 0px 0px;
 /* Action Buttons */
 .packages-booking-actions {
   display: flex;
-  flex-direction: row;
+  justify-content: space-between;
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
@@ -17785,10 +17828,7 @@ padding: 80px 0px 0px 0px;
   padding: 2rem;
   border: 1px solid #e5e7eb;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  position: sticky;
   top: 2rem;
-  overflow-y: visible;
-  overflow-x: hidden;
 }
 
 /* Fixed booking summary - no scroll */
@@ -18862,6 +18902,7 @@ padding: 80px 0px 0px 0px;
 .profile-page-header {
   background: #f9fafb;
   padding: 2rem 6rem;
+  margin-top: 40px;
 }
 
 .profile-page-header-container {
@@ -18923,10 +18964,23 @@ padding: 80px 0px 0px 0px;
   overflow: hidden;
 }
 
-.profile-avatar-large img {
+.profile-avatar-large img,
+.profile-avatar-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile-avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
 }
 
 .profile-upload-btn {
@@ -21529,16 +21583,17 @@ padding: 80px 0px 0px 0px;
 }
 
 /* Captain Profile Page Styles */
-.trippy-mates-captain-profile-hero {
+/* Banner Only Section */
+.trippy-mates-captain-profile-banner {
   position: relative;
-  min-height: 400px;
+  height: 450px;
+  overflow: hidden;
   display: flex;
-  align-items: flex-end;
-  padding: 70px 6rem;
-  margin-bottom: 4rem;
+  align-items: center;
+  justify-content: center;
 }
 
-.trippy-mates-captain-profile-hero-bg {
+.trippy-mates-captain-profile-banner-bg {
   position: absolute;
   top: 0;
   left: 0;
@@ -21549,13 +21604,203 @@ padding: 80px 0px 0px 0px;
   background-repeat: no-repeat;
 }
 
-.trippy-mates-captain-profile-hero-overlay {
+.trippy-mates-captain-profile-banner-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.7));
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
+}
+
+.trippy-mates-captain-profile-banner-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  color: #ffffff;
+  max-width: 800px;
+  padding: 0 2rem;
+}
+
+.trippy-mates-banner-title {
+  font-size: 4rem;
+  font-weight: 900;
+  font-family: var(--font-poppins);
+  margin: 0 0 1.5rem 0;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.trippy-mates-banner-subtitle {
+  font-size: 1.5rem;
+  font-weight: 500;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  margin: 0 0 1.5rem 0;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.trippy-mates-banner-description {
+  font-size: 1.125rem;
+  font-weight: 400;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  margin: 0;
+  line-height: 1.7;
+  opacity: 0.95;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.trippy-mates-back-btn-banner {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.trippy-mates-back-btn-banner:hover {
+  background: #ffffff;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Profile Content Wrapper */
+.trippy-mates-captain-profile-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Profile Card - Professional Design */
+.trippy-mates-captain-profile-card-main {
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+  padding: 2rem;
+  margin-top: -80px;
+  position: relative;
+  z-index: 5;
+}
+
+.trippy-mates-captain-profile-header-card {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.trippy-mates-captain-profile-avatar-card {
+  position: relative;
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+}
+
+.trippy-mates-captain-profile-avatar-card img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.trippy-mates-verified-badge-card {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: #10b981;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #ffffff;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.trippy-mates-captain-profile-info-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.trippy-mates-captain-badge-rating-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.trippy-mates-badge-card {
+  display: inline-block;
+  padding: 0.375rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.trippy-mates-captain-rating-card {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.trippy-mates-captain-name-card {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.trippy-mates-captain-location-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  color: #64748b;
+}
+
+.trippy-mates-captain-languages-card {
+  font-size: 0.875rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.trippy-mates-captain-languages-card strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.trippy-mates-captain-price-card {
+  font-size: 1rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.trippy-mates-price-card-highlight {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-left: 0.5rem;
 }
 
 .trippy-mates-back-btn {
@@ -21666,7 +21911,7 @@ padding: 80px 0px 0px 0px;
 }
 
 .trippy-mates-captain-profile-details {
-  padding: 4rem 0;
+  padding: 8rem 0 4rem 0;
   background: #f8fafc;
 }
 
@@ -21674,7 +21919,7 @@ padding: 80px 0px 0px 0px;
   background: #ffffff;
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
 
 .trippy-mates-profile-section {
@@ -21748,9 +21993,10 @@ padding: 80px 0px 0px 0px;
   background: #ffffff;
   border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
   position: sticky;
   top: 2rem;
+  margin-top: -80px;
 }
 
 .trippy-mates-booking-card-title {
@@ -21799,15 +22045,106 @@ padding: 80px 0px 0px 0px;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* Payment Banner Section */
+.trippy-mates-payment-banner {
+  position: relative;
+  height: 450px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trippy-mates-payment-banner-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.trippy-mates-payment-banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.6));
+}
+
+.trippy-mates-payment-banner-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  color: #ffffff;
+  max-width: 800px;
+  padding: 0 2rem;
+}
+
+.trippy-mates-payment-banner-title {
+  font-size: 3.2rem;
+  font-weight: 900;
+  font-family: var(--font-poppins);
+  margin: 0 0 1.5rem 0;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.trippy-mates-payment-banner-subtitle {
+  font-size: 1.5rem;
+  font-weight: 500;
+  font-family: var(--font-poppins);
+  margin: 0 0 1.5rem 0;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.trippy-mates-payment-banner-description {
+  font-size: 1.125rem;
+  font-weight: 400;
+  font-family: var(--font-poppins);
+  margin: 0;
+  line-height: 1.7;
+  opacity: 0.95;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
 /* Payment Page Styles */
 .trippy-mates-payment-section {
-  padding: 70px 6rem;
+  padding: 5rem 6rem;
   background: #f8fafc;
   min-height: 100vh;
 }
 
 .trippy-mates-payment-container {
   position: relative;
+}
+
+.trippy-mates-payment-back-btn-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-family: var(--font-poppins);
+}
+
+.trippy-mates-payment-back-btn-top:hover {
+  background: #ffffff;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .trippy-mates-payment-header {
@@ -21894,14 +22231,17 @@ padding: 80px 0px 0px 0px;
   align-items: center;
 }
 
-.trippy-mates-payment-captain-image {
+.trippy-mates-payment-captain-image-wrapper {
   position: relative;
+  flex-shrink: 0;
+}
+
+.trippy-mates-payment-captain-image {
   width: 100px;
   height: 100px;
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid #e5e7eb;
-  flex-shrink: 0;
 }
 
 .trippy-mates-payment-captain-image img {
@@ -21912,8 +22252,8 @@ padding: 80px 0px 0px 0px;
 
 .trippy-mates-payment-verified-badge {
   position: absolute;
-  bottom: 0;
-  right: 0;
+  bottom: -2px;
+  right: -2px;
   background: #10b981;
   border-radius: 50%;
   width: 28px;
@@ -21923,6 +22263,7 @@ padding: 80px 0px 0px 0px;
   justify-content: center;
   border: 3px solid #ffffff;
   color: #ffffff;
+  z-index: 10;
 }
 
 .trippy-mates-payment-captain-info {
@@ -22227,6 +22568,8 @@ padding: 80px 0px 0px 0px;
 }
 
 .trippy-mates-success-container {
+   display: grid;
+   place-items: center;
   max-width: 600px;
   width: 100%;
 }
@@ -22241,6 +22584,8 @@ padding: 80px 0px 0px 0px;
 
 .trippy-mates-success-icon {
   margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
 }
 
 .trippy-mates-success-title {
@@ -22328,19 +22673,97 @@ padding: 80px 0px 0px 0px;
 }
 
 @media (max-width: 768px) {
-  .trippy-mates-captain-profile-hero {
-    padding: 2rem 1rem;
-    min-height: 300px;
+  .trippy-mates-captain-profile-banner {
+    height: 350px;
   }
 
-  .trippy-mates-captain-profile-header {
+  .trippy-mates-captain-profile-banner-content {
+    padding: 0 1.5rem;
+  }
+
+  .trippy-mates-banner-title {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .trippy-mates-banner-subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .trippy-mates-banner-description {
+    font-size: 1rem;
+  }
+
+  .trippy-mates-payment-banner {
+    height: 350px;
+  }
+
+  .trippy-mates-payment-banner-content {
+    padding: 0 1.5rem;
+  }
+
+  .trippy-mates-payment-banner-title {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .trippy-mates-payment-banner-subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .trippy-mates-payment-banner-description {
+    font-size: 1rem;
+  }
+
+  .trippy-mates-payment-section {
+    padding: 3rem 1.5rem;
+  }
+
+  .trippy-mates-captain-profile-details {
+    padding: 3rem 0 2rem 0;
+  }
+
+  .trippy-mates-captain-profile-card-main {
+    padding: 1.5rem;
+    margin-top: -60px;
+  }
+
+  .trippy-mates-captain-profile-header-card {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    gap: 1.25rem;
   }
 
-  .trippy-mates-captain-profile-name {
-    font-size: 1.75rem;
+  .trippy-mates-captain-profile-avatar-card {
+    width: 100px;
+    height: 100px;
+  }
+
+  .trippy-mates-captain-profile-info-card {
+    align-items: center;
+    width: 100%;
+  }
+
+  .trippy-mates-captain-badge-rating-card {
+    justify-content: center;
+  }
+
+  .trippy-mates-captain-name-card {
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .trippy-mates-captain-location-card,
+  .trippy-mates-captain-languages-card {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .trippy-mates-captain-booking-card {
+    margin-top: 0;
   }
 
   .trippy-mates-success-actions {

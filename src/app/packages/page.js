@@ -517,7 +517,8 @@ function PackagesPageContent() {
           {categories.map((category, index) => {
             const isSelected = selectedCategory === category.value;
             
-            const handleCategoryClick = () => {
+            const handleCategoryClick = (e) => {
+              e.preventDefault();
               setSelectedCategory(category.value);
               // Update URL with category filter
               const params = new URLSearchParams(searchParams.toString());
@@ -526,7 +527,17 @@ function PackagesPageContent() {
               } else {
                 params.set('category', category.value);
               }
-              router.push(`/packages?${params.toString()}`);
+              // Update URL without scrolling to top
+              const newUrl = `/packages?${params.toString()}`;
+              window.history.pushState({ ...window.history.state }, '', newUrl);
+              
+              // Scroll to packages section smoothly
+              setTimeout(() => {
+                const packagesSection = document.getElementById('packages-section');
+                if (packagesSection) {
+                  packagesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }, 50);
             };
 
             const handleKeyDown = (e) => {
@@ -606,7 +617,7 @@ function PackagesPageContent() {
         </div>
 
       {/* Packages Grid */}
-      <div style={{ marginTop: '2rem 6rem' }}>
+      <div id="packages-section" style={{ marginTop: '2rem 6rem' }}>
         {loading && <PackagesSkeleton />}
         
         {!loading && packages.length === 0 && (
