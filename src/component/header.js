@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -9,6 +9,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import { useRouter } from "next/navigation";
 import { setUser, clearUser } from "@/store/actions/userActions";
 import { useMediaQuery } from "@mui/material";
+import Image from "next/image";
 
 export default function Header() {
   const router = useRouter();
@@ -20,24 +21,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const userMenuRef = useRef(null);
   const isSmScreen = useMediaQuery("(max-width: 768px)");
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setShowUserMenu(false);
-      }
-    };
-
-    if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showUserMenu]);
 
   /* ---------- AUTH CHECK ---------- */
   useEffect(() => {
@@ -233,9 +217,9 @@ export default function Header() {
                 </div>
               )}
 
-              {/* USER / LOGIN */}
+        
               {isAuthenticated ? (
-                <div ref={userMenuRef} style={{ position: 'relative' }}>
+                <div style={{ position: 'relative' }}>
                   <button
                     className="header-user-icon"
                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -243,11 +227,12 @@ export default function Header() {
                   >
                     {getProfilePictureUrl() ? (
                       <>
-                        <img 
-                          src={getProfilePictureUrl()} 
+                        <Image
+                          fill
+                          src={getProfilePictureUrl()}
                           alt={user?.name || 'User'}
                           className="header-avatar-image"
-
+                          sizes="96px"
                         />
                       </>
                     ) : (
@@ -257,11 +242,26 @@ export default function Header() {
                     )}
                   </button>
 
-                  {/* User Dropdown Menu */}
                   {showUserMenu && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Close menu"
+                        onClick={() => setShowUserMenu(false)}
+                        style={{
+                          position: 'fixed',
+                          inset: 0,
+                          zIndex: 999,
+                          cursor: 'default',
+                          border: 'none',
+                          background: 'transparent',
+                          padding: 0,
+                          width: '100%',
+                          height: '100%',
+                        }}
+                      />
+                      <div
+                        style={{
                         position: "absolute",
                         top: "50px",
                         right: 0,
@@ -416,6 +416,7 @@ export default function Header() {
                         Logout
                       </button>
                     </div>
+                    </>
                   )}
                 </div>
               ) : isSmScreen ? (

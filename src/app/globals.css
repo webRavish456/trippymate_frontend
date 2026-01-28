@@ -6822,6 +6822,19 @@ width: 100%;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  display: block;
+}
+
+button.trip-type-card {
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .trip-type-card:hover {
@@ -7429,6 +7442,7 @@ width: 100%;
   opacity: 0;
   transition: opacity 0.5s ease;
   z-index: 1;
+  pointer-events: none;
 }
 
 .region-card-1 .region-color-overlay {
@@ -7459,6 +7473,7 @@ width: 100%;
   bottom: 0;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.85) 100%);
   z-index: 2;
+  pointer-events: none;
 }
 
 .region-floating-badge {
@@ -11192,6 +11207,392 @@ padding: 80px 0px 0px 0px;
   }
 }
 
+/* Safety Process Popup - Travel Solo, Not Alone */
+.safety-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+  backdrop-filter: blur(6px);
+  animation: safetyPopupFadeIn 0.25s ease-out;
+}
+
+@keyframes safetyPopupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.safety-popup {
+  background: #ffffff;
+  border-radius: 24px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  animation: safetyPopupSlideIn 0.3s ease-out;
+}
+
+@keyframes safetyPopupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.safety-popup-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.safety-popup-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+  transform: scale(1.05);
+}
+
+.safety-popup-header {
+  padding: 2.5rem 2.5rem 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.safety-popup-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  color: #1a1a1a;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.25;
+}
+
+.safety-popup-highlight {
+  color: #1D4ED8;
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.safety-popup-subtitle {
+  font-size: 1rem;
+  color: #64748b;
+  font-family: var(--font-family-sans-serif);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.safety-popup-points {
+  list-style: none;
+  margin: 0;
+  padding: 1.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.safety-popup-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  font-size: 0.9375rem;
+  color: #334155;
+  font-family: var(--font-family-sans-serif);
+  line-height: 1.55;
+}
+
+.safety-popup-point-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1D4ED8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.safety-popup-point strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.safety-popup-footer {
+  padding: 1.5rem 2.5rem 2.5rem;
+  text-align: center;
+  border-top: 1px solid #f1f5f9;
+}
+
+.safety-popup-tagline {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 1.25rem 0;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+}
+
+.safety-popup-cta {
+  padding: 0.75rem 2.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.35);
+}
+
+.safety-popup-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(29, 78, 216, 0.4);
+}
+
+@media (max-width: 640px) {
+  .safety-popup-overlay {
+    padding: 1rem;
+    align-items: flex-end;
+  }
+
+  .safety-popup {
+    max-height: 85vh;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .safety-popup-header,
+  .safety-popup-points {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .safety-popup-footer {
+    padding: 1.5rem;
+  }
+
+  .safety-popup-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Customer Review Full Popup */
+.review-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+  backdrop-filter: blur(6px);
+  animation: reviewPopupFadeIn 0.2s ease-out;
+}
+
+@keyframes reviewPopupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.review-popup {
+  background: #fff;
+  border-radius: 20px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  animation: reviewPopupSlideIn 0.25s ease-out;
+}
+
+@keyframes reviewPopupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.review-popup-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.review-popup-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+  transform: scale(1.05);
+}
+
+.review-popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 2.5rem 2rem 0;
+}
+
+.review-popup-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.35;
+  flex: 1;
+}
+
+.review-popup-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #22c55e;
+  color: #fff;
+  padding: 0.35rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.review-popup-text {
+  font-size: 1rem;
+  color: #374151;
+  line-height: 1.65;
+  margin: 1rem 2rem 0;
+  font-family: var(--font-family-sans-serif);
+}
+
+.review-popup-images {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1.25rem 2rem 0;
+  flex-wrap: wrap;
+}
+
+.review-popup-image {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.review-popup-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.review-popup-footer {
+  margin: 1.25rem 2rem 0;
+  font-size: 0.9375rem;
+  color: #6b7280;
+  font-family: var(--font-family-sans-serif);
+}
+
+.review-popup-time,
+.review-popup-sep,
+.review-popup-author,
+.review-popup-location {
+  margin-right: 0.25rem;
+}
+
+.review-popup-close-btn {
+  display: block;
+  width: calc(100% - 4rem);
+  margin: 1.5rem 2rem 2rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-poppins), Poppins, sans-serif;
+  color: #fff;
+  background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.review-popup-close-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(29, 78, 216, 0.35);
+}
+
+@media (max-width: 640px) {
+  .review-popup-overlay {
+    padding: 1rem;
+    align-items: flex-end;
+  }
+
+  .review-popup {
+    max-height: 85vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .review-popup-header {
+    flex-direction: column;
+    padding: 2rem 1.5rem 0;
+  }
+
+  .review-popup-text,
+  .review-popup-images,
+  .review-popup-footer {
+    margin-left: 1.5rem;
+    margin-right: 1.5rem;
+  }
+
+  .review-popup-close-btn {
+    margin-left: 1.5rem;
+    margin-right: 1.5rem;
+    width: calc(100% - 3rem);
+  }
+}
+
 /* Customer Reviews Section */
 .destination-details-section[style*="paddingInline"] {
   padding-left: 6rem;
@@ -11225,7 +11626,29 @@ padding: 80px 0px 0px 0px;
   text-decoration: underline;
 }
 
+.customer-reviews-page-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
 
+.customer-reviews-page-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.customer-reviews-page-divider {
+  width: 80px;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #1D4ED8, transparent);
+  border-radius: 2px;
+}
+
+.destination-reviews-list-all {
+  margin-top: 0;
+}
 
 
 
@@ -11395,6 +11818,11 @@ padding: 80px 0px 0px 0px;
   text-decoration: none;
   font-weight: 600;
   margin-left: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 .destination-review-read-more:hover {
@@ -12061,7 +12489,6 @@ padding: 80px 0px 0px 0px;
   padding: 80px 0px;
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0f9ff 100%);
   width: 100%;
-  margin: 80px 0;
 }
 
 /* New Activities Card Style - Same as Attractions */

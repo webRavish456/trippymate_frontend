@@ -87,6 +87,7 @@ export default function ExploreDesignation() {
           const formattedMonths = seasonData.data
             .filter(item => item.status === 'active')
             .map(item => ({
+              id: item._id,
               monthTitle: item.title || item.name || '',
               color: item.color || '#0077ff',
               places: item.places || '',
@@ -96,13 +97,15 @@ export default function ExploreDesignation() {
             }));
           setMonths(formattedMonths);
           
-          // Flatten all destinations from all months
+          // Flatten all destinations from all months (parentId for Best Months Explore)
           const allDest = [];
           formattedMonths.forEach(month => {
             if (month.placesDetails && month.placesDetails.length > 0) {
+              const parentId = month.id || month.monthTitle;
               month.placesDetails.forEach(place => {
                 allDest.push({
                   ...place,
+                  parentId,
                   monthTitle: month.monthTitle,
                   monthColor: month.color,
                   image: place.image || place.images?.[0] || month.image || '/explore-destination/monthly/default.png'
@@ -263,8 +266,8 @@ export default function ExploreDesignation() {
     ).join(' ');
   };
 
-  // Handle category hover/selection
-  const handleCategoryHover = (category) => {
+  // Handle category click (was hover) – change on click only
+  const handleCategoryClick = (category) => {
     setSelectedCategory(category);
     setCategoryPlaces(category.placesDetails || []);
   };
@@ -542,8 +545,10 @@ export default function ExploreDesignation() {
          
             <div className="pick-your-type-cards-wrapper">
               <button 
+                type="button"
                 className="pick-your-type-nav pick-your-type-nav-left swiper-button-prev-triptype" 
                 aria-label="Previous"
+                onClick={() => tripTypeSwiperRef.current?.slidePrev()}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -619,9 +624,10 @@ export default function ExploreDesignation() {
                 >
                   {categories.map((category, index) => (
                     <SwiperSlide key={category.id || index}>
-                      <div 
+                      <button 
+                        type="button"
                         className="trip-type-card"
-                        onMouseEnter={() => handleCategoryHover(category)}
+                        onClick={() => handleCategoryClick(category)}
                       >
                         <div className="trip-type-card-image-wrapper">
                           <img src={category.image} alt={category.name} className="trip-type-card-image"/>
@@ -631,7 +637,7 @@ export default function ExploreDesignation() {
                           <h1 className="trip-type-card-title">{capitalizeCategoryName(category.name)}</h1>
                           <p className="trip-type-card-locations">{category.locations}</p>
                         </div>
-                      </div>
+                      </button>
                     </SwiperSlide>
                   ))}
                 </Swiper>
@@ -646,8 +652,10 @@ export default function ExploreDesignation() {
               )}
 
               <button 
+                type="button"
                 className="pick-your-type-nav pick-your-type-nav-right swiper-button-next-triptype" 
                 aria-label="Next"
+                onClick={() => tripTypeSwiperRef.current?.slideNext()}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -709,7 +717,16 @@ export default function ExploreDesignation() {
                                   <p className="popular-mountains-description">
                                     {place.description || place.weatherInfo || "Experience the beauty of this amazing destination."}
                                   </p>
-                                  <button className="popular-mountains-button">
+                                  <button 
+                                    type="button"
+                                    className="popular-mountains-button"
+                                    onClick={() => {
+                                      const pid = place._id || (selectedCategory?.id && place.placeName
+                                        ? `${selectedCategory.id}-${(place.placeName || '').replace(/\s+/g, '-')}`
+                                        : null);
+                                      if (pid) router.push(`/explore-destination/${pid}`);
+                                    }}
+                                  >
                                     View Details
                                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                       <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -909,7 +926,16 @@ export default function ExploreDesignation() {
                       <h3>{dest.location || dest.placeName || dest.name || 'Destination'}</h3>
                       <p className="btv-places">{dest.placeName || dest.name || ''}</p>
                       <p className="btv-desc">{dest.description || dest.desc || dest.weatherInfo || ''}</p>
-                      <button className="btv-explore-button">
+                      <button 
+                        type="button"
+                        className="btv-explore-button"
+                        onClick={() => {
+                          const pid = dest._id || (dest.parentId && (dest.placeName || dest.name)
+                            ? `${dest.parentId}-${(dest.placeName || dest.name || '').replace(/\s+/g, '-')}`
+                            : null);
+                          if (pid) router.push(`/explore-destination/${pid}`);
+                        }}
+                      >
                         Explore Now
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1012,9 +1038,9 @@ export default function ExploreDesignation() {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        const regionName = (r.name || '').toLowerCase().replace(/\s+/g, '-');
-                        console.log('Navigating to region:', regionName);
-                        router.push(`/explore-destination/region/${regionName}`);
+                        const slugMap = { 'North India': 'north-india', 'South India': 'south-india', 'East India': 'east-india', 'West India': 'west-india' };
+                        const regionSlug = slugMap[r.name?.trim()] ?? (r.name || '').toLowerCase().replace(/\s+/g, '-').replace(/(^-+|-+$)/g, '');
+                        if (regionSlug) router.push(`/explore-destination/region/${regionSlug}`);
                       }}
                     >
                       <span>Explore</span>

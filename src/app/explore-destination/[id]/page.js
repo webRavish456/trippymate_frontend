@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Grid } from "@mui/material";
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
@@ -120,6 +121,8 @@ export default function DestinationDetailsPage() {
   const [destinationPackages, setDestinationPackages] = useState([]);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const [packageCount, setPackageCount] = useState(0);
+  const [showSafetyPopup, setShowSafetyPopup] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
 
   // Swiper refs for carousels
   const attractionsSwiperRef = useRef(null);
@@ -127,6 +130,16 @@ export default function DestinationDetailsPage() {
   const hotelsSwiperRef = useRef(null);
   const foodSwiperRef = useRef(null);
   const nearbySwiperRef = useRef(null);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return;
+      if (selectedReview) setSelectedReview(null);
+      else if (showSafetyPopup) setShowSafetyPopup(false);
+    };
+    globalThis.addEventListener('keydown', onKeyDown);
+    return () => globalThis.removeEventListener('keydown', onKeyDown);
+  }, [showSafetyPopup, selectedReview]);
 
   useEffect(() => {
     const fetchDestinationDetails = async () => {
@@ -294,7 +307,7 @@ export default function DestinationDetailsPage() {
   return (
     <div className="flex items-center justify-center bg-zinc-50 font-sans dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
       <main className="flex w-full flex-col items-center bg-white dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
-        <div className="destination-details-content" style={{ width: '100%', paddingTop: '4rem', paddingBottom: '2rem' }}>
+        <div className="destination-details-content" style={{ width: '100%', paddingTop: '4rem' }}>
           {/* Hero Section */}
           <section className="destination-hero-section" style={{paddingInline: '6rem'}}>
             <Grid container spacing={{xs: 3, md: 6}}>
@@ -1160,7 +1173,12 @@ export default function DestinationDetailsPage() {
                 </div>
                 
                 <div className="destination-solo-travel-cta">
-                  <button className="destination-solo-travel-btn">
+                  <button 
+                    className="destination-solo-travel-btn" 
+                    type="button"
+                    onClick={() => setShowSafetyPopup(true)}
+                    aria-label="Learn about our safety process"
+                  >
                     Learn About Our Safety Process
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1175,7 +1193,9 @@ export default function DestinationDetailsPage() {
           <section className="destination-details-section" style={{paddingInline: '6rem'}}>
             <div className="destination-reviews-header">
               <h2 className="destination-details-section-title">Customer Reviews</h2>
-              <a href="#" className="destination-reviews-view-all">View all Reviews ({destinationDetails.reviews?.length || 0})</a>
+              <Link href={`/explore-destination/${destinationId}/reviews`} className="destination-reviews-view-all">
+                View all Reviews ({destinationDetails.reviews?.length || 0})
+              </Link>
             </div>
          
             <div className="destination-reviews-container">
@@ -1265,7 +1285,7 @@ export default function DestinationDetailsPage() {
                             </div>
                             <p className="destination-review-text">
                               {review.comment || 'The services was very nice and clean process i really liked the services they gave me.'}
-                              <a href="#" className="destination-review-read-more">....Read more</a>
+                              <button type="button" className="destination-review-read-more" onClick={() => setSelectedReview(review)}>....Read more</button>
                             </p>
                             <div className="destination-review-images">
                               {[1, 2, 3, 4, 5].map((img) => (
@@ -1315,7 +1335,7 @@ export default function DestinationDetailsPage() {
                         </div>
                         <p className="destination-review-text">
                           {review.comment || 'The services was very nice and clean process i really liked the services they gave me.'}
-                          <a href="#" className="destination-review-read-more">....Read more</a>
+                          <button type="button" className="destination-review-read-more" onClick={() => setSelectedReview(review)}>....Read more</button>
                         </p>
                         <div className="destination-review-images">
                           {[1, 2, 3, 4, 5].map((img) => (
@@ -1358,6 +1378,176 @@ export default function DestinationDetailsPage() {
           </section>
         </div>
       </main>
+
+      {/* Safety Process Popup - Travel Solo, Not Alone */}
+      {showSafetyPopup && (
+        <div 
+          className="safety-popup-overlay" 
+          onClick={(e) => e.target === e.currentTarget && setShowSafetyPopup(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="safety-popup-title"
+        >
+          <div className="safety-popup">
+            <button 
+              type="button"
+              className="safety-popup-close" 
+              onClick={() => setShowSafetyPopup(false)}
+              aria-label="Close safety popup"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div className="safety-popup-header">
+              <h2 id="safety-popup-title" className="safety-popup-title">
+                Travel <span className="safety-popup-highlight">Solo</span>, Not Alone
+              </h2>
+              <p className="safety-popup-subtitle">
+                Your safety is our priority. Here’s how we keep you secure on every trip across India.
+              </p>
+            </div>
+            <ul className="safety-popup-points">
+              <li className="safety-popup-point">
+                <span className="safety-popup-point-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="currentColor" strokeWidth="2"/>
+                    <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </span>
+                <div>
+                  <strong>SOS &amp; Emergency Helpline</strong> — 24/7 safety assistance wherever you travel. One tap to reach our team.
+                </div>
+              </li>
+              <li className="safety-popup-point">
+                <span className="safety-popup-point-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </span>
+                <div>
+                  <strong>Female-Friendly Features</strong> — Comfort and safety built for solo female travellers. Women-only options where needed.
+                </div>
+              </li>
+              <li className="safety-popup-point">
+                <span className="safety-popup-point-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
+                <div>
+                  <strong>Transparent Refund Policies</strong> — Hassle-free, clear refund terms. No hidden conditions.
+                </div>
+              </li>
+              <li className="safety-popup-point">
+                <span className="safety-popup-point-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </span>
+                <div>
+                  <strong>Verified IDs &amp; Background Checks</strong> — Every traveller and Captain verified. Strict onboarding for all.
+                </div>
+              </li>
+              <li className="safety-popup-point">
+                <span className="safety-popup-point-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </span>
+                <div>
+                  <strong>Real-Time Trip Tracking</strong> — Share live location with trusted contacts. Stay connected throughout your journey.
+                </div>
+              </li>
+              <li className="safety-popup-point">
+                <span className="safety-popup-point-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M19.4 15C19.2669 15.3016 19.2272 15.6362 19.2862 15.9606C19.3452 16.285 19.5003 16.5843 19.7315 16.8155C19.9627 17.0467 20.262 17.2018 20.5864 17.2608C20.9108 17.3198 21.2454 17.2801 21.547 17.147L21.6 17.1C21.9316 16.951 22.2135 16.716 22.4153 16.4222C22.6171 16.1283 22.731 15.787 22.745 15.435L22.8 12C22.8 6.588 18.412 2.2 13 2.2L11 2C5.588 2 1.2 6.588 1.2 12C1.2 17.412 5.588 21.8 11 21.8L13 22C15.721 22.094 18.335 21.031 20.2 19.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </span>
+                <div>
+                  <strong>Curated Safe Routes &amp; Stays</strong> — We only list routes and accommodations that meet our safety standards.
+                </div>
+              </li>
+            </ul>
+         
+          </div>
+        </div>
+      )}
+
+      {/* Customer Review Full Popup */}
+      {selectedReview && (
+        <div
+          className="review-popup-overlay"
+          onClick={(e) => e.target === e.currentTarget && setSelectedReview(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="review-popup-title"
+        >
+          <div className="review-popup">
+            <button
+              type="button"
+              className="review-popup-close"
+              onClick={() => setSelectedReview(null)}
+              aria-label="Close review"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div className="review-popup-header">
+              <h2 id="review-popup-title" className="review-popup-title">
+                {selectedReview.comment?.substring(0, 60) || 'Customer review'}
+                {(selectedReview.comment?.length || 0) > 60 ? '...' : ''}
+              </h2>
+              <div className="review-popup-rating">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="white"/>
+                </svg>
+                <span>{selectedReview.rating ?? 4.5}</span>
+              </div>
+            </div>
+            <p className="review-popup-text">
+              {selectedReview.comment || 'The services was very nice and clean process i really liked the services they gave me.'}
+            </p>
+            <div className="review-popup-images">
+              {[1, 2, 3, 4, 5].map((img) => (
+                <div key={img} className="review-popup-image">
+                  <img
+                    src="https://images.unsplash.com/photo-1556912172-45b7abe8b7c4?w=100&h=100&fit=crop&q=80"
+                    alt={`Review image ${img}`}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="review-popup-footer">
+             
+              <span className="review-popup-author">{selectedReview.userName || 'Guest'}</span>
+              <span className="review-popup-sep">–</span>
+
+              <span className="review-popup-time">
+                {(() => {
+                  if (!selectedReview.date) return 'Recently';
+                  const reviewDate = new Date(selectedReview.date);
+                  const now = new Date();
+                  const monthsDiff = Math.floor((now - reviewDate) / (1000 * 60 * 60 * 24 * 30));
+                  if (monthsDiff < 1) return 'Recently';
+                  if (monthsDiff === 1) return '1 month ago';
+                  return `${monthsDiff} months ago`;
+                })()}
+              </span>
+
+            </div>
+            <button type="button" className="review-popup-close-btn" onClick={() => setSelectedReview(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
