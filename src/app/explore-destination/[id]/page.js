@@ -429,17 +429,12 @@ export default function DestinationDetailsPage() {
                       <button 
                         className="destination-hero-btn-primary"
                         onClick={() => {
-                          // Navigate to first package detail page if packages exist
-                          if (destinationPackages && destinationPackages.length > 0) {
-                            const firstPackageId = destinationPackages[0]._id || destinationPackages[0].id;
-                            if (firstPackageId) {
-                              router.push(`/packages/${firstPackageId}`);
-                            } else {
-                              // If no package ID, navigate to packages list with destination filter
-                              router.push(`/packages?destination=${destinationId}`);
-                            }
+                          // Navigate to packages page for this destination
+                          if (destinationDetails?.name) {
+                            const destinationSlug = destinationDetails.name.toLowerCase().replace(/\s+/g, '-');
+                            router.push(`/packages/destination/${destinationSlug}`);
                           } else {
-                            // If no packages loaded yet, navigate to packages list with destination filter
+                            // Fallback to query parameter if name not available
                             router.push(`/packages?destination=${destinationId}`);
                           }
                         }}
@@ -448,7 +443,16 @@ export default function DestinationDetailsPage() {
                       </button>
                       <button 
                         className="destination-hero-btn-secondary"
-                        onClick={() => router.push(`/packages?destination=${destinationId}`)}
+                        onClick={() => {
+                          // Navigate to packages page for this destination
+                          if (destinationDetails?.name) {
+                            const destinationSlug = destinationDetails.name.toLowerCase().replace(/\s+/g, '-');
+                            router.push(`/packages/destination/${destinationSlug}`);
+                          } else {
+                            // Fallback to query parameter if name not available
+                            router.push(`/packages?destination=${destinationId}`);
+                          }
+                        }}
                       >
                         Plan My Trip
                       </button>
@@ -1220,8 +1224,8 @@ export default function DestinationDetailsPage() {
                           return (
                             <svg key={star} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" 
-                                fill={filled ? "#22c55e" : halfFilled ? "#22c55e" : "#e5e7eb"} 
-                                stroke={filled ? "#22c55e" : halfFilled ? "#22c55e" : "#e5e7eb"} 
+                                fill={filled ? "#fbbf24" : halfFilled ? "#fbbf24" : "#e5e7eb"} 
+                                stroke={filled ? "#fbbf24" : halfFilled ? "#fbbf24" : "#e5e7eb"} 
                                 strokeWidth="1"
                                 opacity={halfFilled ? "0.5" : "1"}
                               />
@@ -1245,7 +1249,7 @@ export default function DestinationDetailsPage() {
                                 className="destination-reviews-distribution-bar" 
                                 style={{ 
                                   width: `${barWidth}%`,
-                                  backgroundColor: rating >= 4 ? '#22c55e' : rating >= 3 ? '#f59e0b' : '#ef4444'
+                                  backgroundColor: rating === 5 ? '#22c55e' : rating === 4 ? '#3b82f6' : rating === 3 ? '#f59e0b' : rating === 2 ? '#f97316' : '#ef4444'
                                 }}
                               ></div>
                             </div>

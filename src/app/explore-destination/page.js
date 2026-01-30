@@ -155,6 +155,8 @@ export default function ExploreDesignation() {
         // Fetch Region data - Only show 4 main regions: North, South, East, West
         const regionRes = await fetch(`${API_BASE_URL}/api/admin/destination/region`);
         const regionData = await regionRes.json();
+
+        console.log("regionData", regionData);
         if (regionData.status && regionData.data) {
           // Filter to only get North, South, East, West regions
           const mainRegions = ['north', 'south', 'east', 'west'];
@@ -176,8 +178,7 @@ export default function ExploreDesignation() {
               else if (regionName.includes('west')) normalizedName = 'West India';
               else normalizedName = item.region || item.name || '';
               
-              // Only add if this normalized region name doesn't exist in map
-              // This ensures we only have one entry per region
+            
               if (!regionMap.has(normalizedName)) {
                 regionMap.set(normalizedName, {
                   id: item._id, // Use first document's ID
@@ -189,9 +190,10 @@ export default function ExploreDesignation() {
               }
             });
           
+
           // Convert Map to Array
           const formattedRegions = Array.from(regionMap.values());
-          
+
           // Sort regions in order: North, South, East, West
           const regionOrder = { 'north india': 0, 'south india': 1, 'east india': 2, 'west india': 3 };
           formattedRegions.sort((a, b) => {
@@ -253,7 +255,7 @@ export default function ExploreDesignation() {
     fetchData();
   }, []);
 
-  // Capitalize category name properly
+
   const capitalizeCategoryName = (name) => {
     if (!name) return '';
     const lowerName = name.toLowerCase();
@@ -548,7 +550,11 @@ export default function ExploreDesignation() {
                 type="button"
                 className="pick-your-type-nav pick-your-type-nav-left swiper-button-prev-triptype" 
                 aria-label="Previous"
-                onClick={() => tripTypeSwiperRef.current?.slidePrev()}
+                onClick={() => {
+                  if (tripTypeSwiperRef.current) {
+                    tripTypeSwiperRef.current.slidePrev();
+                  }
+                }}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -593,18 +599,14 @@ export default function ExploreDesignation() {
                   onSwiper={(swiper) => {
                     tripTypeSwiperRef.current = swiper;
                   }}
-                  modules={[Navigation, Autoplay]}
+                  modules={[Autoplay]}
                   spaceBetween={20}
                   slidesPerView={1}
-                  loop={true}
+                  loop={categories.length > 4}
                   autoplay={{
                     delay: 3000,
                     disableOnInteraction: false,
                     pauseOnMouseEnter: true,
-                  }}
-                  navigation={{
-                    prevEl: '.swiper-button-prev-triptype',
-                    nextEl: '.swiper-button-next-triptype',
                   }}
                   breakpoints={{
                     640: {
@@ -655,7 +657,11 @@ export default function ExploreDesignation() {
                 type="button"
                 className="pick-your-type-nav pick-your-type-nav-right swiper-button-next-triptype" 
                 aria-label="Next"
-                onClick={() => tripTypeSwiperRef.current?.slideNext()}
+                onClick={() => {
+                  if (tripTypeSwiperRef.current) {
+                    tripTypeSwiperRef.current.slideNext();
+                  }
+                }}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1014,8 +1020,15 @@ export default function ExploreDesignation() {
           </div>
         ) : regions.length > 0 ? (
           <div className="region-grid">
-            {regions.map((r, i) => (
-              <div className={`region-card region-card-${i + 1}`} key={i}>
+            {regions.map((r, i) => {
+              // Debug: Log region data to check structure
+              if (i === 0) {
+                console.log('Region data structure:', r);
+                console.log('Region name:', r.name, 'Type:', typeof r.name);
+              }
+              
+              return (
+              <div className={`region-card region-card-${i + 1}`} key={r.id || i}>
                 <div className="region-card-inner">
                   <div className="region-image-wrapper">
                     <img src={r.image} alt={r.name} />
@@ -1035,12 +1048,38 @@ export default function ExploreDesignation() {
                     <button 
                       type="button"
                       className="region-explore-btn"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        const slugMap = { 'North India': 'north-india', 'South India': 'south-india', 'East India': 'east-india', 'West India': 'west-india' };
-                        const regionSlug = slugMap[r.name?.trim()] ?? (r.name || '').toLowerCase().replace(/\s+/g, '-').replace(/(^-+|-+$)/g, '');
-                        if (regionSlug) router.push(`/explore-destination/region/${regionSlug}`);
+                        const regionName = (r.name || '').trim();
+                        const regionNameLower = regionName.toLowerCase();
+                        
+                        console.log('Button clicked for region:', regionName, 'Lower:', regionNameLower, 'Index:', i);
+                        
+                        // Map region names to slugs (case-insensitive matching)
+                        let regionSlug = '';
+                        if (regionNameLower.includes('north')) {
+                          regionSlug = 'north-india';
+                        } else if (regionNameLower.includes('south')) {
+                          regionSlug = 'south-india';
+                        } else if (regionNameLower.includes('east')) {
+                          regionSlug = 'east-india';
+                        } else if (regionNameLower.includes('west')) {
+                          regionSlug = 'west-india';
+                        } else {
+                          // Fallback: normalize the name
+                          regionSlug = regionNameLower.replace(/\s+/g, '-').replace(/(^-+|-+$)/g, '');
+                        }
+                        
+                        console.log('Navigating to:', `/explore-destination/region/${regionSlug}`);
+                        if (regionSlug) {
+                          router.push(`/explore-destination/region/${regionSlug}`);
+                        } else {
+                          console.error('No region slug generated for:', regionName);
+                        }
                       }}
                     >
                       <span>Explore</span>
@@ -1052,7 +1091,8 @@ export default function ExploreDesignation() {
                   <div className="region-corner-accent"></div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="region-grid">

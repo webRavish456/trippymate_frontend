@@ -9,6 +9,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 
 import { API_BASE_URL } from '@/lib/config';
+import { checkDestinationWithinRadius } from '@/lib/captainDestinationRadius';
 
 export default function TrippyMatesPage() {
   const router = useRouter();
@@ -301,6 +302,30 @@ export default function TrippyMatesPage() {
     // Validate form
     if (!validateForm()) {
       return;
+    }
+
+    // 150 km radius: destination must be near captain's location
+    const captainLocation = selectedCaptain.location || selectedCaptain.address || '';
+    if (captainLocation && bookingForm.destination.trim()) {
+      setBookingLoading(true);
+      try {
+        const radiusResult = await checkDestinationWithinRadius(
+          captainLocation,
+          bookingForm.destination.trim(),
+          150
+        );
+        if (!radiusResult.within) {
+          setFormErrors((prev) => ({ ...prev, destination: '', destinationRadius: radiusResult.message }));
+          setBookingLoading(false);
+          return;
+        }
+        setFormErrors((prev) => ({ ...prev, destinationRadius: '' }));
+      } catch (err) {
+        console.warn('Destination radius check failed:', err);
+        setFormErrors((prev) => ({ ...prev, destinationRadius: '' }));
+        setBookingLoading(false);
+      }
+      // When radius passes, keep loading true; try block below will handle finally
     }
 
     // Check for conflicts
@@ -1050,8 +1075,8 @@ export default function TrippyMatesPage() {
 
           {selectedUnavailableDates.length > 0 && (
               <div style={{
-                backgroundColor: '#fef2f2',
-                border: '2px solid #dc2626',
+                backgroundColor: '#eff6ff',
+                border: '2px solid #1d4ed8',
                 borderRadius: '0.5rem',
                 padding: '1rem',
                 margin: '1rem 0rem',
@@ -1061,9 +1086,9 @@ export default function TrippyMatesPage() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#1d4ed8"/>
                   </svg>
-                  <strong style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                  <strong style={{ color: '#1d4ed8', fontSize: '0.875rem' }}>
                     Captain is not available on the following dates:
                   </strong>
                 </div>
@@ -1076,13 +1101,13 @@ export default function TrippyMatesPage() {
                     <span 
                       key={idx}
                       style={{
-                        backgroundColor: '#fee2e2',
-                        color: '#991b1b',
+                        backgroundColor: '#dbeafe',
+                        color: '#1d4ed8',
                         padding: '0.375rem 0.75rem',
                         borderRadius: '0.375rem',
                         fontSize: '0.8125rem',
                         fontWeight: '500',
-                        border: '1px solid #fecaca'
+                        border: '1px solid #93c5fd'
                       }}
                     >
                       {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -1100,9 +1125,11 @@ export default function TrippyMatesPage() {
                   onChange={(e) => {
                     setBookingForm({ ...bookingForm, destination: e.target.value });
                     setBookingConflict(null);
-                
                     if (formErrors.destination) {
                       setFormErrors({ ...formErrors, destination: '' });
+                    }
+                    if (formErrors.destinationRadius) {
+                      setFormErrors({ ...formErrors, destinationRadius: '' });
                     }
                     // Re-check conflict when destination changes
                     if (bookingForm.startDate && bookingForm.endDate) {
@@ -1115,9 +1142,18 @@ export default function TrippyMatesPage() {
                     }
                   }}
                   placeholder="e.g., Goa, Manali, Shimla"
-                  className={formErrors.destination ? 'trippy-mates-input-error' : ''}
+                  className={
+                    formErrors.destination
+                      ? 'trippy-mates-input-error'
+                      : formErrors.destinationRadius
+                        ? 'trippy-mates-input-notice'
+                        : ''
+                  }
                 />
-                {formErrors.destination && (
+                {formErrors.destinationRadius && (
+                  <span className="trippy-mates-form-notice">{formErrors.destinationRadius}</span>
+                )}
+                {formErrors.destination && !formErrors.destinationRadius && (
                   <span className="trippy-mates-form-error">{formErrors.destination}</span>
                 )}
               </div>

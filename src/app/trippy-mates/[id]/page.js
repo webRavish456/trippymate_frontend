@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Container, Grid, Skeleton } from '@mui/material';
 
 import { API_BASE_URL } from '@/lib/config';
+import { checkDestinationWithinRadius } from '@/lib/captainDestinationRadius';
 
 export default function CaptainProfilePage() {
   const params = useParams();
@@ -28,6 +29,7 @@ export default function CaptainProfilePage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [selectedUnavailableDates, setSelectedUnavailableDates] = useState([]);
   const [dateErrors, setDateErrors] = useState({ startDate: '', endDate: '' });
+  const [destinationRadiusError, setDestinationRadiusError] = useState('');
 
   useEffect(() => {
     fetchCaptainDetails();
@@ -111,6 +113,28 @@ export default function CaptainProfilePage() {
     e.preventDefault();
     
     if (!captain) return;
+
+    const captainLocation = captain.location || captain.address || '';
+    if (captainLocation && bookingForm.destination.trim()) {
+      setBookingLoading(true);
+      try {
+        const radiusResult = await checkDestinationWithinRadius(
+          captainLocation,
+          bookingForm.destination.trim(),
+          150
+        );
+        if (!radiusResult.within) {
+          setDestinationRadiusError(radiusResult.message);
+          setBookingLoading(false);
+          return;
+        }
+        setDestinationRadiusError('');
+      } catch (err) {
+        console.warn('Destination radius check failed:', err);
+        setDestinationRadiusError('');
+      }
+      setBookingLoading(false);
+    }
 
     try {
       setBookingLoading(true);
@@ -429,8 +453,8 @@ export default function CaptainProfilePage() {
             {/* Show unavailable dates below title */}
             {selectedUnavailableDates.length > 0 && (
               <div style={{
-                backgroundColor: '#fef2f2',
-                border: '2px solid #dc2626',
+                backgroundColor: '#eff6ff',
+                border: '2px solid #1d4ed8',
                 borderRadius: '0.5rem',
                 padding: '1rem',
                 margin: '1rem 1.5rem',
@@ -440,9 +464,9 @@ export default function CaptainProfilePage() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#dc2626"/>
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#1d4ed8"/>
                   </svg>
-                  <strong style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+                  <strong style={{ color: '#1d4ed8', fontSize: '0.875rem' }}>
                     Captain is not available on the following dates:
                   </strong>
                 </div>
@@ -455,13 +479,13 @@ export default function CaptainProfilePage() {
                     <span 
                       key={idx}
                       style={{
-                        backgroundColor: '#fee2e2',
-                        color: '#991b1b',
+                        backgroundColor: '#dbeafe',
+                        color: '#1d4ed8',
                         padding: '0.375rem 0.75rem',
                         borderRadius: '0.375rem',
                         fontSize: '0.8125rem',
                         fontWeight: '500',
-                        border: '1px solid #fecaca'
+                        border: '1px solid #93c5fd'
                       }}
                     >
                       {new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -476,10 +500,17 @@ export default function CaptainProfilePage() {
                 <input
                   type="text"
                   value={bookingForm.destination}
-                  onChange={(e) => setBookingForm({ ...bookingForm, destination: e.target.value })}
+                  onChange={(e) => {
+                    setBookingForm({ ...bookingForm, destination: e.target.value });
+                    if (destinationRadiusError) setDestinationRadiusError('');
+                  }}
                   placeholder="e.g., Goa, Manali, Shimla"
+                  className={destinationRadiusError ? 'trippy-mates-input-notice' : ''}
                   required
                 />
+                {destinationRadiusError && (
+                  <span className="trippy-mates-form-notice">{destinationRadiusError}</span>
+                )}
               </div>
               
               <div className="trippy-mates-booking-form-row">

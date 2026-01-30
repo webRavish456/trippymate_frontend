@@ -143,11 +143,9 @@ export default function CustomerReviewsPage() {
             <div className="destination-reviews-header customer-reviews-page-header">
               <div className="customer-reviews-page-title-wrap">
                 <h1 className="destination-details-section-title">Customer Reviews</h1>
-                <div className="customer-reviews-page-divider" />
+              
               </div>
-              <Link href={`/explore-destination/${destinationId}`} className="destination-reviews-view-all">
-                Back to {destination.name}
-              </Link>
+             
             </div>
             <div className="destination-reviews-container">
               {reviews.length > 0 ? (
@@ -165,8 +163,8 @@ export default function CustomerReviewsPage() {
                                 <svg key={star} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path
                                     d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                                    fill={filled || halfFilled ? '#22c55e' : '#e5e7eb'}
-                                    stroke={filled || halfFilled ? '#22c55e' : '#e5e7eb'}
+                                    fill={filled || halfFilled ? '#fbbf24' : '#e5e7eb'}
+                                    stroke={filled || halfFilled ? '#fbbf24' : '#e5e7eb'}
                                     strokeWidth="1"
                                     opacity={halfFilled ? '0.5' : '1'}
                                   />
@@ -187,7 +185,7 @@ export default function CustomerReviewsPage() {
                                     className="destination-reviews-distribution-bar"
                                     style={{
                                       width: `${barWidth}%`,
-                                      backgroundColor: rating >= 4 ? '#22c55e' : rating >= 3 ? '#f59e0b' : '#ef4444',
+                                      backgroundColor: rating === 5 ? '#22c55e' : rating === 4 ? '#3b82f6' : rating === 3 ? '#f59e0b' : rating === 2 ? '#f97316' : '#ef4444',
                                     }}
                                   />
                                 </div>

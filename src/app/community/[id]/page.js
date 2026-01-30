@@ -23,6 +23,7 @@ function CommunityTripDetailPageContent() {
   });
   const [messages, setMessages] = useState([]);
   const [trip, setTrip] = useState(null);
+  const [myMemberStatus, setMyMemberStatus] = useState(null); // 'pending' | 'approved' | 'rejected' | null (not a member)
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -46,27 +47,22 @@ function CommunityTripDetailPageContent() {
 
     const socketInstance = io(API_BASE_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
-      reconnectionAttempts: Infinity, // Keep trying to reconnect
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
-      forceNew: false,
-      upgrade: true
+      forceNew: false
     });
 
     socketInstance.on('connect', () => {
-      console.log('Socket connected');
-      // Join trip room
       socketInstance.emit('join-trip', tripId);
-      // Reload messages when reconnected to ensure we have all messages
       fetchMessages();
     });
 
-    socketInstance.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message || error);
-      // Don't show error to user, just log it
+    socketInstance.on('connect_error', () => {
+      // Connection may fail when backend is on different origin or WS not allowed; polling will retry
     });
 
     socketInstance.on('reconnect', (attemptNumber) => {
@@ -176,11 +172,10 @@ function CommunityTripDetailPageContent() {
     fetchUserRating();
   }, [tripId]);
 
-  // Fetch messages when trip is loaded
+  // Fetch messages when trip is loaded and user is approved (chat only for approved members)
   useEffect(() => {
-    if (!trip) return;
-    
-    // Check if trip is upcoming
+    if (!trip || !tripId) return;
+    if (myMemberStatus !== 'approved') return;
     const checkIfUpcoming = () => {
       if (!trip?.startDate) return false;
       const today = new Date();
@@ -189,13 +184,9 @@ function CommunityTripDetailPageContent() {
       startDate.setHours(0, 0, 0, 0);
       return today < startDate;
     };
-    
     const isUpcoming = queryIsUpcoming ? checkIfUpcoming() : false;
-    
-    if (!isUpcoming) {
-      fetchMessages();
-    }
-  }, [trip, queryIsUpcoming]);
+    if (!isUpcoming) fetchMessages();
+  }, [trip, tripId, myMemberStatus, queryIsUpcoming]);
 
   // Scroll to bottom when new message arrives
   useEffect(() => {
@@ -238,7 +229,13 @@ function CommunityTripDetailPageContent() {
 
       if (result.status && result.data) {
         const tripData = result.data;
-        
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        const currentUserId = (user._id || user.id)?.toString?.() || (user._id || user.id);
+
+        const memberId = (m) => (m.userId?._id ?? m.userId)?.toString?.() ?? (m.userId && String(m.userId));
+        const myMember = (tripData.members || []).find(m => memberId(m) === currentUserId);
+        setMyMemberStatus(myMember?.status || null);
+
         // Format date range
         const startDate = new Date(tripData.startDate);
         const endDate = new Date(tripData.endDate);
@@ -257,7 +254,7 @@ function CommunityTripDetailPageContent() {
           .map(m => ({
             id: m.userId?._id || m.userId,
             name: m.userId?.name || m.userId?.email || 'Member',
-            image: m.userId?.profileImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+            image: m.userId?.profilePicture || m.userId?.profileImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
             isHost: (m.userId?._id || m.userId)?.toString() === organizerId?.toString()
           }));
 
@@ -353,7 +350,7 @@ function CommunityTripDetailPageContent() {
       _id: msg._id,
       userId: msg.userId?._id || msg.userId,
       userName: msg.userName || msg.userId?.name || msg.adminId?.name || 'User',
-      userImage: msg.userImage || msg.userId?.profileImage || msg.adminId?.profileImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
+      userImage: msg.userImage || msg.userId?.profilePicture || msg.userId?.profileImage || msg.adminId?.profilePicture || msg.adminId?.profileImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop',
       text: msg.message,
       timestamp: date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       isHost: isHost,
@@ -415,6 +412,11 @@ function CommunityTripDetailPageContent() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+    if (myMemberStatus !== 'approved') {
+      setToast({ show: true, message: 'Chat is available after your join request is approved.', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+      return;
+    }
     if (!message.trim() || !socket) {
       if (!socket) {
         setToast({ show: true, message: 'Connection not established. Please refresh the page.', type: 'error' });
@@ -603,7 +605,7 @@ function CommunityTripDetailPageContent() {
           </div>
         )}
 
-        {/* Left Side - Group Chat or Coming Soon */}
+        {/* Left Side - Group Chat / Pending / Coming Soon */}
         {isUpcoming ? (
           <div style={{ 
             flex: 1, 
@@ -683,6 +685,62 @@ function CommunityTripDetailPageContent() {
               </div>
             </div>
           </div>
+        ) : myMemberStatus !== 'approved' ? (
+          <div style={{ 
+            flex: 1, 
+            display: 'flex', 
+            flexDirection: 'column',
+            backgroundColor: 'white',
+            borderRadius: '20px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            overflow: 'hidden',
+            height: '100%',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '3rem 2rem'
+          }}>
+            <div style={{ textAlign: 'center', maxWidth: '420px' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 1.5rem',
+                borderRadius: '50%',
+                backgroundColor: myMemberStatus === 'pending' ? '#fef3c7' : '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke={myMemberStatus === 'pending' ? '#d97706' : '#64748b'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.75rem' }}>
+                {myMemberStatus === 'pending' ? 'Join request pending' : myMemberStatus === 'rejected' ? 'Join request not approved' : 'Join to access chat'}
+              </h2>
+              <p style={{ fontSize: '1rem', color: '#64748b', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                {myMemberStatus === 'pending'
+                  ? 'Your request to join this trip is pending. Group chat will be available after admin approval.'
+                  : myMemberStatus === 'rejected'
+                    ? 'Your join request was not approved for this trip.'
+                    : 'Join this community trip to participate in the group chat.'}
+              </p>
+              <button
+                onClick={() => router.push('/community')}
+                style={{
+                  backgroundColor: '#1D4ED8',
+                  color: 'white',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '50px',
+                  border: 'none',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Back to Community
+              </button>
+            </div>
+          </div>
         ) : (
           <div style={{ 
             flex: 1, 
@@ -694,7 +752,7 @@ function CommunityTripDetailPageContent() {
             overflow: 'hidden',
             height: '100%'
           }}>
-            {/* Chat Header */}
+            {/* Chat Header - Joined + Chat Now */}
             <div style={{
               padding: '1rem 1.5rem',
               borderBottom: '1px solid #e5e7eb',
@@ -702,16 +760,27 @@ function CommunityTripDetailPageContent() {
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
-              <div>
-                <h2 style={{
-                  fontSize: '1.5rem',
-                  fontWeight: '700',
-                  color: '#1e293b',
-                  margin: 0,
-                  marginBottom: '0.25rem'
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '50px',
+                  fontSize: '0.875rem',
+                  fontWeight: '700'
                 }}>
-                  Group Chat
-                </h2>
+                  Joined
+                </span>
+                <div>
+                  <h2 style={{
+                    fontSize: '1.5rem',
+                    fontWeight: '700',
+                    color: '#1e293b',
+                    margin: 0,
+                    marginBottom: '0.25rem'
+                  }}>
+                    Group Chat
+                  </h2>
                 <p style={{
                   fontSize: '0.875rem',
                   color: '#64748b',
@@ -719,6 +788,7 @@ function CommunityTripDetailPageContent() {
                 }}>
                   {trip.members || 0} members {!isUpcoming ? 'online' : ''}
                 </p>
+                </div>
               </div>
               <div style={{
                 display: 'flex',

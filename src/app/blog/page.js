@@ -14,8 +14,8 @@ import { API_BASE_URL } from '@/lib/config';
 function BlogPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const category = searchParams.get('category') || 'all';
-  const [selectedCategory, setSelectedCategory] = useState(category || 'all');
+  const categoryFromUrl = searchParams.get('category') || 'all';
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl || 'all');
   const [blogPosts, setBlogPosts] = useState([]);
   const [articles, setArticles] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
@@ -25,10 +25,15 @@ function BlogPageContent() {
   const [error, setError] = useState(null);
   const [expandedFAQId, setExpandedFAQId] = useState(null);
 
+  // Sync selected category with URL (e.g. on back/forward or direct link)
+  useEffect(() => {
+    setSelectedCategory(categoryFromUrl || 'all');
+  }, [categoryFromUrl]);
+
   // Fetch data from API
   useEffect(() => {
     fetchBlogData();
-  }, [selectedCategory]);
+  }, []);
 
   const fetchBlogData = async () => {
     try {
@@ -177,6 +182,16 @@ function BlogPageContent() {
     { value: 'all', label: 'View all', count: 0 }
   ];
 
+  // Filter blog posts by selected category (case-insensitive)
+  const filteredBlogPosts =
+    selectedCategory === 'all'
+      ? displayBlogPosts
+      : displayBlogPosts.filter((post) => {
+          const postCategory = (post.category || '').toString().toLowerCase();
+          const selected = (selectedCategory || '').toString().toLowerCase();
+          return postCategory === selected;
+        });
+
   const toggleFAQ = (id) => {
     setExpandedFAQId(expandedFAQId === id ? null : id);
   };
@@ -319,17 +334,8 @@ function BlogPageContent() {
                     } else {
                       params.set('category', cat.value);
                     }
-                    // Update URL without scrolling to top
                     const newUrl = `/blog?${params.toString()}`;
                     window.history.pushState({ ...window.history.state }, '', newUrl);
-                    
-                    // Scroll to blog posts section smoothly
-                    setTimeout(() => {
-                      const blogSection = document.getElementById('blog-posts-section');
-                      if (blogSection) {
-                        blogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    }, 50);
                   }}
                   style={{
                     background: isSelected ? 'white' : 'transparent',
@@ -409,7 +415,7 @@ function BlogPageContent() {
             <p>{error}</p>
           </div>
         )}
-        {!loading && !error && displayBlogPosts.length === 0 && (
+        {!loading && !error && filteredBlogPosts.length === 0 && (
           <div style={{ textAlign: 'center', padding: '3rem' }}>
             <p style={{ 
               fontSize: '1.5rem', 
@@ -417,13 +423,15 @@ function BlogPageContent() {
               color: '#1e293b',
               margin: 0
             }}>
-              No blog posts available yet.
+              {selectedCategory !== 'all'
+                ? `No blog posts in this category yet.`
+                : 'No blog posts available yet.'}
             </p>
           </div>
         )}
-        {!loading && !error && displayBlogPosts.length > 0 && (
+        {!loading && !error && filteredBlogPosts.length > 0 && (
           <Grid container spacing={4}>
-            {displayBlogPosts.map((post) => (
+            {filteredBlogPosts.map((post) => (
             <Grid size={{ xs: 12, md: 4 }} key={post._id || post.id}>
               <Link href={`/blog/${post._id || post.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{

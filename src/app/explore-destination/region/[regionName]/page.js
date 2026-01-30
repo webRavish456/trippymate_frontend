@@ -5,232 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 
 import { API_BASE_URL } from '@/lib/config';
 
-// Dummy data for different regions
-const getDummyStatesData = (regionName) => {
-  const regionLower = regionName.toLowerCase();
-  
-  if (regionLower.includes('north')) {
-    return [
-      {
-        name: 'Uttar Pradesh',
-        state: 'Uttar Pradesh',
-        destinations: [
-          {
-            _id: '1',
-            id: '1',
-            name: 'Taj Mahal, Agra',
-            location: 'Agra, Uttar Pradesh',
-            rating: 4.8,
-            description: 'One of the Seven Wonders of the World, a magnificent white marble mausoleum.',
-            image: '/explore-destination/taj-mahal.jpg',
-            images: ['/explore-destination/taj-mahal.jpg']
-          },
-          {
-            _id: '2',
-            id: '2',
-            name: 'Varanasi',
-            location: 'Varanasi, Uttar Pradesh',
-            rating: 4.6,
-            description: 'The spiritual capital of India, known for its ghats and ancient temples.',
-            image: '/explore-destination/varanasi.jpg',
-            images: ['/explore-destination/varanasi.jpg']
-          },
-          {
-            _id: '3',
-            id: '3',
-            name: 'Lucknow',
-            location: 'Lucknow, Uttar Pradesh',
-            rating: 4.5,
-            description: 'City of Nawabs, famous for its rich culture and delicious cuisine.',
-            image: '/explore-destination/lucknow.jpg',
-            images: ['/explore-destination/lucknow.jpg']
-          }
-        ]
-      },
-      {
-        name: 'Himachal Pradesh',
-        state: 'Himachal Pradesh',
-        destinations: [
-          {
-            _id: '4',
-            id: '4',
-            name: 'Manali',
-            location: 'Manali, Himachal Pradesh',
-            rating: 4.7,
-            description: 'A beautiful hill station in the mountains, perfect for adventure and relaxation.',
-            image: '/explore-destination/manali.jpg',
-            images: ['/explore-destination/manali.jpg']
-          },
-          {
-            _id: '5',
-            id: '5',
-            name: 'Shimla',
-            location: 'Shimla, Himachal Pradesh',
-            rating: 4.6,
-            description: 'The Queen of Hills, a charming hill station with colonial architecture.',
-            image: '/explore-destination/shimla.jpg',
-            images: ['/explore-destination/shimla.jpg']
-          }
-        ]
-      },
-      {
-        name: 'Uttarakhand',
-        state: 'Uttarakhand',
-        destinations: [
-          {
-            _id: '6',
-            id: '6',
-            name: 'Rishikesh',
-            location: 'Rishikesh, Uttarakhand',
-            rating: 4.5,
-            description: 'Yoga capital of the world, located on the banks of the Ganges.',
-            image: '/explore-destination/rishikesh.jpg',
-            images: ['/explore-destination/rishikesh.jpg']
-          },
-          {
-            _id: '7',
-            id: '7',
-            name: 'Mussoorie',
-            location: 'Mussoorie, Uttarakhand',
-            rating: 4.6,
-            description: 'The Queen of Hills, a popular hill station with scenic beauty.',
-            image: '/explore-destination/mussoorie.jpg',
-            images: ['/explore-destination/mussoorie.jpg']
-          }
-        ]
-      }
-    ];
-  } else if (regionLower.includes('south')) {
-    return [
-      {
-        name: 'Kerala',
-        state: 'Kerala',
-        destinations: [
-          {
-            _id: '8',
-            id: '8',
-            name: 'Munnar',
-            location: 'Munnar, Kerala',
-            rating: 4.7,
-            description: 'Beautiful hill station known for tea plantations and scenic landscapes.',
-            image: '/explore-destination/munnar.jpg',
-            images: ['/explore-destination/munnar.jpg']
-          },
-          {
-            _id: '9',
-            id: '9',
-            name: 'Alleppey',
-            location: 'Alleppey, Kerala',
-            rating: 4.6,
-            description: 'Famous for its backwaters and houseboat cruises.',
-            image: '/explore-destination/alleppey.jpg',
-            images: ['/explore-destination/alleppey.jpg']
-          }
-        ]
-      },
-      {
-        name: 'Tamil Nadu',
-        state: 'Tamil Nadu',
-        destinations: [
-          {
-            _id: '10',
-            id: '10',
-            name: 'Ooty',
-            location: 'Ooty, Tamil Nadu',
-            rating: 4.5,
-            description: 'Queen of Hill Stations, known for its tea gardens and pleasant weather.',
-            image: '/explore-destination/ooty.jpg',
-            images: ['/explore-destination/ooty.jpg']
-          }
-        ]
-      }
-    ];
-  } else if (regionLower.includes('east')) {
-    return [
-      {
-        name: 'West Bengal',
-        state: 'West Bengal',
-        destinations: [
-          {
-            _id: '11',
-            id: '11',
-            name: 'Darjeeling',
-            location: 'Darjeeling, West Bengal',
-            rating: 4.6,
-            description: 'Famous for tea plantations and the Darjeeling Himalayan Railway.',
-            image: '/explore-destination/darjeeling.jpg',
-            images: ['/explore-destination/darjeeling.jpg']
-          }
-        ]
-      }
-    ];
-  } else if (regionLower.includes('west')) {
-    return [
-      {
-        name: 'Rajasthan',
-        state: 'Rajasthan',
-        destinations: [
-          {
-            _id: '12',
-            id: '12',
-            name: 'Jaipur',
-            location: 'Jaipur, Rajasthan',
-            rating: 4.7,
-            description: 'The Pink City, known for its royal palaces and vibrant culture.',
-            image: '/explore-destination/jaipur.jpg',
-            images: ['/explore-destination/jaipur.jpg']
-          },
-          {
-            _id: '13',
-            id: '13',
-            name: 'Udaipur',
-            location: 'Udaipur, Rajasthan',
-            rating: 4.8,
-            description: 'City of Lakes, famous for its beautiful lakes and palaces.',
-            image: '/explore-destination/udaipur.jpg',
-            images: ['/explore-destination/udaipur.jpg']
-          }
-        ]
-      },
-      {
-        name: 'Gujarat',
-        state: 'Gujarat',
-        destinations: [
-          {
-            _id: '14',
-            id: '14',
-            name: 'Ahmedabad',
-            location: 'Ahmedabad, Gujarat',
-            rating: 4.5,
-            description: 'Historical city known for its rich heritage and delicious food.',
-            image: '/explore-destination/ahmedabad.jpg',
-            images: ['/explore-destination/ahmedabad.jpg']
-          }
-        ]
-      }
-    ];
-  }
-  
-  // Default dummy data
-  return [
-    {
-      name: 'Sample State',
-      state: 'Sample State',
-      destinations: [
-        {
-          _id: '15',
-          id: '15',
-            name: 'Sample Destination',
-            location: 'Sample Location',
-            rating: 4.5,
-            description: 'A beautiful destination worth visiting.',
-            image: '/explore-destination/default.png',
-            images: ['/explore-destination/default.png']
-        }
-      ]
-    }
-  ];
-};
 
 export default function RegionDetailPage() {
   const params = useParams();
@@ -243,12 +17,22 @@ export default function RegionDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Prevent multiple calls if regionName is empty or already fetched
+    if (!regionName) {
+      setLoading(false);
+      return;
+    }
+
+    let isCancelled = false; // Flag to prevent state updates if component unmounts
+
     const fetchRegionData = async () => {
       try {
         setLoading(true);
         
         // First, get all regions to find the matching one
         const regionsRes = await fetch(`${API_BASE_URL}/api/admin/destination/region`);
+        if (isCancelled) return;
+        
         const regionsData = await regionsRes.json();
         
         if (regionsData.status && regionsData.data) {
@@ -261,76 +45,133 @@ export default function RegionDetailPage() {
             regionNameFormatted.includes(keyword)
           );
           
-          // Find the region by checking if region name contains the keyword
-          const matchedRegion = regionsData.data.find(r => {
+          // IMPORTANT:
+          // Backend may return multiple docs for same region (e.g. "North India" per state).
+          // So we aggregate ALL matching docs instead of picking only the first.
+          const matchedRegions = (regionsData.data || []).filter((r) => {
             if (!r || r.status !== 'active') return false;
             const regionNameLower = (r.region || r.name || '').toLowerCase();
-            
-            // If we found a keyword, match by keyword
-            if (regionKeyword) {
-              return regionNameLower.includes(regionKeyword);
-            }
-            // Otherwise, exact match
+            if (regionKeyword) return regionNameLower.includes(regionKeyword);
             return regionNameLower === regionNameFormatted;
           });
 
-          if (matchedRegion) {
-            setRegionData(matchedRegion);
-            
-            // Try to fetch states and destinations
-            try {
-              const statesRes = await fetch(`${API_BASE_URL}/api/admin/destination/region/${matchedRegion._id}/states`);
-              const statesData = await statesRes.json();
-              
-              console.log('States API Response:', statesData); // Debug log
-              
-              if (statesData.status && statesData.data && statesData.data.states) {
-                setStates(statesData.data.states);
-              } else if (matchedRegion.states && Array.isArray(matchedRegion.states)) {
-                // Fallback to states from region data
-                setStates(matchedRegion.states);
-              } else if (matchedRegion.placesDetails && Array.isArray(matchedRegion.placesDetails) && matchedRegion.placesDetails.length > 0) {
-                // Convert placesDetails to states format
-                console.log('Converting placesDetails to states format');
-                const convertedStates = convertPlacesDetailsToStates(matchedRegion.placesDetails, matchedRegion._id, matchedRegion.state);
-                setStates(convertedStates);
-              } else {
-                // Use dummy data if no states found
-                console.log('Using dummy data for:', regionNameFormatted);
-                setStates(getDummyStatesData(regionNameFormatted));
-              }
-            } catch (error) {
-              console.error('Error fetching states:', error);
-              // Fallback to states from region data
-              if (matchedRegion.states && Array.isArray(matchedRegion.states)) {
-                setStates(matchedRegion.states);
-              } else if (matchedRegion.placesDetails && Array.isArray(matchedRegion.placesDetails) && matchedRegion.placesDetails.length > 0) {
-                // Convert placesDetails to states format
-                console.log('Converting placesDetails to states format (fallback)');
-                const convertedStates = convertPlacesDetailsToStates(matchedRegion.placesDetails, matchedRegion._id, matchedRegion.state);
-                setStates(convertedStates);
-              } else {
-                // Use dummy data if no states found
-                console.log('Using dummy data due to error:', regionNameFormatted);
-                setStates(getDummyStatesData(regionNameFormatted));
+          if (matchedRegions.length > 0) {
+            // Use first doc for header image/title, but states are aggregated from all docs.
+            setRegionData(matchedRegions[0]);
+
+            const statesMap = new Map(); // key: state name
+            const destinationsSet = new Set(); // Track unique destinations by composite key
+
+            // Helper to merge "states" arrays coming from API into our map
+            const mergeStatesArray = (statesArr) => {
+              if (!Array.isArray(statesArr)) return;
+              statesArr.forEach((st) => {
+                const stateName = st?.name || st?.state || 'Unknown State';
+                if (!statesMap.has(stateName)) {
+                  statesMap.set(stateName, { name: stateName, state: stateName, destinations: [] });
+                }
+                const dests = Array.isArray(st?.destinations) ? st.destinations : [];
+                if (dests.length > 0) {
+                  dests.forEach(dest => {
+                    // Create unique key: stateName-placeName
+                    const uniqueKey = `${stateName}-${dest.name || dest.placeName || dest._id || dest.id}`;
+                    if (!destinationsSet.has(uniqueKey)) {
+                      destinationsSet.add(uniqueKey);
+                      statesMap.get(stateName).destinations.push(dest);
+                    }
+                  });
+                }
+              });
+            };
+
+            // OPTIMIZATION: Check if placesDetails exists first (most common case)
+            // If placesDetails exists, use it directly without API calls
+            let hasPlacesDetails = false;
+            for (const mr of matchedRegions) {
+              if (mr.placesDetails && Array.isArray(mr.placesDetails) && mr.placesDetails.length > 0) {
+                hasPlacesDetails = true;
+                const convertedStates = convertPlacesDetailsToStates(mr.placesDetails, mr._id, mr.state);
+                convertedStates.forEach(state => {
+                  const stateName = state.name || state.state || 'Unknown State';
+                  if (!statesMap.has(stateName)) {
+                    statesMap.set(stateName, { name: stateName, state: stateName, destinations: [] });
+                  }
+                  // Add destinations with deduplication
+                  state.destinations.forEach(dest => {
+                    const uniqueKey = `${stateName}-${dest.name || dest.placeName || dest._id || dest.id}`;
+                    if (!destinationsSet.has(uniqueKey)) {
+                      destinationsSet.add(uniqueKey);
+                      statesMap.get(stateName).destinations.push(dest);
+                    }
+                  });
+                });
               }
             }
+
+            // Only make API calls if placesDetails is not available
+            if (!hasPlacesDetails) {
+              // Fetch/convert data for each matched doc and merge
+              await Promise.all(
+                matchedRegions.map(async (mr) => {
+                  // 1) Try states API for each region doc id (only if placesDetails not found)
+                  try {
+                    const statesRes = await fetch(`${API_BASE_URL}/api/admin/destination/region/${mr._id}/states`);
+                    const statesData = await statesRes.json();
+                    if (statesData?.status && statesData?.data?.states) {
+                      mergeStatesArray(statesData.data.states);
+                      return;
+                    }
+                  } catch (e) {
+                    // ignore and fallback below
+                  }
+
+                  // 2) Fallback: states field directly on doc
+                  if (mr.states && Array.isArray(mr.states) && mr.states.length > 0) {
+                    mergeStatesArray(mr.states);
+                    return;
+                  }
+
+                  // 3) Last fallback: if backend is "per-state doc" and only `state` is present,
+                  // create an empty state section so UI doesn't show 0.
+                  if (mr.state) {
+                    const stateName = mr.state;
+                    if (!statesMap.has(stateName)) {
+                      statesMap.set(stateName, { name: stateName, state: stateName, destinations: [] });
+                    }
+                  }
+                })
+              );
+            }
+
+            if (!isCancelled) {
+              setStates(Array.from(statesMap.values()));
+            }
           } else {
-            // If region not found, use dummy data
-            console.log('Region not found, using dummy data for:', regionNameFormatted);
-            setStates(getDummyStatesData(regionNameFormatted));
+            if (!isCancelled) {
+              setStates([]);
+              setRegionData(null);
+            }
           }
         }
       } catch (error) {
         console.error('Error fetching region data:', error);
+        if (!isCancelled) {
+          setStates([]);
+          setRegionData(null);
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    if (regionName) {
-      fetchRegionData();
-    }
+    fetchRegionData();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isCancelled = true;
+    };
   }, [regionName]);
 
   // Helper function to convert placesDetails to states format
@@ -339,9 +180,18 @@ export default function RegionDetailPage() {
     
     // Group places by state (use place.state if available, otherwise use region.state)
     const statesMap = new Map();
+    const placeSet = new Set(); // Track unique places by name+state
     
     placesDetails.forEach((place, index) => {
       const stateName = place.state || regionState || 'Unknown State';
+      const placeName = place.placeName || 'Destination';
+      
+      // Create unique key to avoid duplicates
+      const uniqueKey = `${stateName}-${placeName}`;
+      if (placeSet.has(uniqueKey)) {
+        return; // Skip duplicate places
+      }
+      placeSet.add(uniqueKey);
       
       if (!statesMap.has(stateName)) {
         statesMap.set(stateName, {
@@ -352,13 +202,13 @@ export default function RegionDetailPage() {
       }
       
       // Create composite ID: regionId-placeName-index
-      const compositeId = `${regionId}-${place.placeName}-${index}`;
+      const compositeId = `${regionId}-${placeName}-${index}`;
       
       const destination = {
         _id: place._id || place.id || compositeId,
         id: place._id || place.id || compositeId,
-        name: place.placeName || 'Destination',
-        location: place.location || `${place.placeName}, ${stateName}`,
+        name: placeName,
+        location: place.location || `${placeName}, ${stateName}`,
         rating: place.rating || 4.5,
         description: place.description || '',
         image: place.images?.[0] || place.image || '/explore-destination/default.png',

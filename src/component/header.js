@@ -265,13 +265,15 @@ export default function Header() {
                         position: "absolute",
                         top: "50px",
                         right: 0,
-                        background: "#fff",
+                        background: "rgba(245, 245, 247, 0.98)",
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
                         borderRadius: "12px",
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
                         minWidth: "200px",
                         padding: "0.5rem",
                         zIndex: 1000,
-                        border: "1px solid #e5e7eb",
+                        border: "1px solid rgba(0,0,0,0.06)",
                       }}
                     >
                       {/* User Info */}
@@ -353,6 +355,34 @@ export default function Header() {
                         }}
                       >
                         My Booking
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          router.push("/my-rewards");
+                          setShowUserMenu(false);
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          textAlign: "left",
+                          background: "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontSize: "0.9375rem",
+                          color: "#374151",
+                          fontWeight: 500,
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "#f3f4f6";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "transparent";
+                        }}
+                      >
+                        My Rewards
                       </button>
 
                       <button

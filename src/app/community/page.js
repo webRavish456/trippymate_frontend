@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Grid, useMediaQuery, useTheme, Skeleton } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
+import { io } from 'socket.io-client';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import { API_BASE_URL } from '@/lib/config';
@@ -44,6 +45,49 @@ export default function CommunityPage() {
     fetchTrips();
   }, []);
 
+  // Socket: listen for join-request-status (approved/rejected) so UI updates in real time
+  const socketRef = useRef(null);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const socket = io(API_BASE_URL, {
+      auth: { token },
+      transports: ['polling', 'websocket'],
+      reconnection: true
+    });
+    socketRef.current = socket;
+    socket.on('connect', () => {
+      socket.emit('join-user-room');
+    });
+    socket.on('join-request-status', (data) => {
+      const { tripId, status } = data || {};
+      if (!tripId) return;
+      setJoinedTrips(prev => {
+        const next = new Set(prev);
+        if (status === 'approved') {
+          next.add(tripId);
+        }
+        return next;
+      });
+      setPendingTrips(prev => {
+        const next = new Set(prev);
+        next.delete(tripId);
+        return next;
+      });
+      setToast({
+        show: true,
+        message: status === 'approved'
+          ? 'Your join request was approved. You have joined the trip!'
+          : 'Your join request was not approved for this trip.'
+      });
+      setTimeout(() => setToast(prev => ({ ...prev, show: false })), 4000);
+    });
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
   const fetchTrips = async () => {
     try {
       setLoading(true);
@@ -69,14 +113,16 @@ export default function CommunityPage() {
         setUpcomingTrips(transformedUpcoming);
       }
 
-      // Fetch formed trips (ongoing and upcoming)
-      const formedResponse = await fetch(`${API_BASE_URL}/api/user/community-trip/all?limit=6`);
+      // Fetch formed trips (ongoing and upcoming) — send token so backend can return correct membership
+      const token = localStorage.getItem('token');
+      const formedResponse = await fetch(`${API_BASE_URL}/api/user/community-trip/all?limit=6`, {
+        ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
+      });
       const formedResult = await formedResponse.json();
       
       if (formedResult.status) {
-        const token = localStorage.getItem('token');
         const user = JSON.parse(localStorage.getItem('user') || '{}');
-        const userId = user._id || user.id;
+        const userId = (user._id || user.id)?.toString?.() || user._id || user.id;
         
         const transformedFormed = formedResult.data.map(trip => {
           const startDate = new Date(trip.startDate);
@@ -96,10 +142,9 @@ export default function CommunityPage() {
           const organizerName = trip.organizerName || 'Organizer';
           const displayName = (organizerName.toLowerCase() === 'superadmin@gmail.com' || organizerName === 'superadmin@gmail.com') ? 'Admin' : organizerName;
           
-          // Check user's membership status
-          const userMember = trip.members?.find(m => 
-            (m.userId?._id || m.userId)?.toString() === userId?.toString()
-          );
+          // Check user's membership status (userId can be populated object or raw id)
+          const memberId = (m) => (m.userId?._id ?? m.userId)?.toString?.() ?? (m.userId && String(m.userId));
+          const userMember = trip.members?.find(m => memberId(m) === (userId && String(userId)));
           const memberStatus = userMember?.status || null;
           
           return {
@@ -642,75 +687,110 @@ export default function CommunityPage() {
                       </span>
                     </div>
 
-                    <button 
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (joinedTrips.has(trip.id)) {
-                          router.push(`/community/${trip.id}?isUpcoming=true`);
-                          return;
-                        }
-                        
-                        if (pendingTrips.has(trip.id)) {
-                          // Already pending, do nothing or show message
-                          return;
-                        }
-                        
-                        try {
-                          const token = localStorage.getItem('token');
-                          const response = await fetch(`${API_BASE_URL}/api/user/community-trip/${trip.id}/join`, {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${token}`,
-                              'Content-Type': 'application/json'
-                            }
-                          });
-                          
-                          const result = await response.json();
-                          
-                          if (result.status) {
-                            // Show toast message
-                            setToast({ show: true, message: 'Your request will be sent' });
-                            setTimeout(() => setToast({ show: false, message: '' }), 3000);
-                            
-                            // Add to pending trips
-                            setPendingTrips(new Set([...pendingTrips, trip.id]));
-                          } else {
-                            alert(result.message || 'Failed to send join request');
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <button 
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (joinedTrips.has(trip.id)) {
+                            router.push(`/community/${trip.id}?isUpcoming=true`);
+                            return;
                           }
-                        } catch (error) {
-                          console.error('Error joining trip:', error);
-                          alert('Failed to send join request. Please try again.');
-                        }
-                      }}
-                      style={{
-                        width: 'auto',
-                        minWidth: '120px',
-                        margin: '0 auto',
-                        backgroundColor: joinedTrips.has(trip.id) ? '#10b981' : pendingTrips.has(trip.id) ? '#f59e0b' : 'white',
-                        color: joinedTrips.has(trip.id) || pendingTrips.has(trip.id) ? 'white' : '#1D4ED8',
-                        padding: isMobile ? '0.625rem 1.25rem' : '0.625rem 1.25rem',
-                        borderRadius: '50px',
-                        border: 'none',
-                        fontSize: isMobile ? '0.875rem' : '0.875rem',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!joinedTrips.has(trip.id) && !pendingTrips.has(trip.id)) {
-                          e.currentTarget.style.backgroundColor = '#f3f4f6';
-                        }
-                        e.currentTarget.style.transform = 'scale(1.05)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!joinedTrips.has(trip.id) && !pendingTrips.has(trip.id)) {
-                          e.currentTarget.style.backgroundColor = 'white';
-                        }
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    >
-                      {joinedTrips.has(trip.id) ? 'Joined' : pendingTrips.has(trip.id) ? 'Pending' : 'Join Now'}
-                    </button>
+                          
+                          if (pendingTrips.has(trip.id)) {
+                            return;
+                          }
+                          
+                          try {
+                            const token = localStorage.getItem('token');
+                            const response = await fetch(`${API_BASE_URL}/api/user/community-trip/${trip.id}/join`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              }
+                            });
+                            
+                            const result = await response.json();
+                            
+                            if (result.status) {
+                              setToast({ show: true, message: 'Your request will be sent' });
+                              setTimeout(() => setToast({ show: false, message: '' }), 3000);
+                              setPendingTrips(new Set([...pendingTrips, trip.id]));
+                            } else {
+                              const msg = result.message || 'Failed to send join request';
+                              if (msg.toLowerCase().includes('already a member') || msg.toLowerCase().includes('already requested')) {
+                                setPendingTrips(prev => new Set([...prev, trip.id]));
+                                fetchTrips();
+                              }
+                              setToast({ show: true, message: msg });
+                              setTimeout(() => setToast({ show: false, message: '' }), 4000);
+                            }
+                          } catch (error) {
+                            console.error('Error joining trip:', error);
+                            setToast({ show: true, message: 'Failed to send join request. Please try again.' });
+                            setTimeout(() => setToast({ show: false, message: '' }), 4000);
+                          }
+                        }}
+                        style={{
+                          width: 'auto',
+                          minWidth: '100px',
+                          backgroundColor: joinedTrips.has(trip.id) ? '#10b981' : pendingTrips.has(trip.id) ? '#f59e0b' : 'white',
+                          color: joinedTrips.has(trip.id) || pendingTrips.has(trip.id) ? 'white' : '#1D4ED8',
+                          padding: isMobile ? '0.625rem 1.25rem' : '0.625rem 1.25rem',
+                          borderRadius: '50px',
+                          border: 'none',
+                          fontSize: isMobile ? '0.875rem' : '0.875rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!joinedTrips.has(trip.id) && !pendingTrips.has(trip.id)) {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                          }
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!joinedTrips.has(trip.id) && !pendingTrips.has(trip.id)) {
+                            e.currentTarget.style.backgroundColor = 'white';
+                          }
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        {joinedTrips.has(trip.id) ? 'Joined' : pendingTrips.has(trip.id) ? 'Pending' : 'Join Now'}
+                      </button>
+                      {joinedTrips.has(trip.id) && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/community/${trip.id}?isUpcoming=true`);
+                          }}
+                          style={{
+                            width: 'auto',
+                            minWidth: '100px',
+                            backgroundColor: '#1D4ED8',
+                            color: 'white',
+                            padding: isMobile ? '0.625rem 1.25rem' : '0.625rem 1.25rem',
+                            borderRadius: '50px',
+                            border: 'none',
+                            fontSize: isMobile ? '0.875rem' : '0.875rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1e40af';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#1D4ED8';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          Chat Now
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </SwiperSlide>
@@ -724,14 +804,18 @@ export default function CommunityPage() {
       )}
 
       {/* Formed Community Trips */}
-      <section className="formed-community-section" style={{ padding: '0px 6rem 80px', background: 'linear-gradient(to top, #1d4ed8 20%, rgb(255, 255, 255) 50%, rgb(29, 78, 216,0.96) 100%)', marginBottom: 0 }}>
+      <section className="formed-community-section" style={{ 
+        padding: '0px 6rem 80px', 
+        marginBottom: 0,
+        ...(loading || formedTrips.length > 0 ? { background: 'linear-gradient(to top, #1d4ed8 20%, rgb(255, 255, 255) 50%, rgb(29, 78, 216,0.96) 100%)' } : {})
+      }}>
         <div className="formed-community-content" style={{ position: 'relative', zIndex: 2 }}>
           <h2 style={{ 
             fontSize: '2.5rem', 
             fontWeight: 'bold', 
-            color: 'white',
+            color: formedTrips.length === 0 && !loading ? '#334155' : 'white',
             marginBottom: '3rem',
-            textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+            ...(formedTrips.length > 0 || loading ? { textShadow: '0 2px 10px rgba(0,0,0,0.3)' } : {})
           }}>
             Formed Community Trips
           </h2>
@@ -773,28 +857,21 @@ export default function CommunityPage() {
           ) : formedTrips.length === 0 ? (
             <div style={{ 
               textAlign: 'center', 
-              padding: '6rem 2rem',
+              padding: '4rem 2rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '400px'
+              minHeight: '200px'
             }}>
-              <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                borderRadius: '16px',
-                padding: '3rem 4rem',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                backdropFilter: 'blur(10px)'
+              <p style={{ 
+                color: '#475569', 
+                fontSize: '1.125rem',
+                fontWeight: '500',
+                margin: 0,
+                letterSpacing: '0.01em'
               }}>
-                <p style={{ 
-                  color: '#64748b', 
-                  fontSize: '1.5rem',
-                  fontWeight: '600',
-                  margin: 0
-                }}>
-                  No community
-                </p>
-              </div>
+                No trip community yet
+              </p>
             </div>
           ) : loading ? (
             <Grid container rowSpacing={5} columnSpacing={5}>
@@ -1011,83 +1088,117 @@ export default function CommunityPage() {
                     </div>
                   </div>
 
-                  {/* Join Now Button - Right Side */}
-                  <button 
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (joinedTrips.has(trip.id)) {
-                        router.push(`/community/${trip.id}`);
-                        return;
-                      }
-                      
-                      if (pendingTrips.has(trip.id)) {
-                        // Already pending, do nothing
-                        return;
-                      }
-                      
-                      try {
-                        const token = localStorage.getItem('token');
-                        const response = await fetch(`http://localhost:8080/api/user/community-trip/${trip.id}/join`, {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                          }
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (result.status) {
-                          // Show toast message
-                          setToast({ show: true, message: 'Your request will be sent' });
-                          setTimeout(() => setToast({ show: false, message: '' }), 3000);
-                          
-                          // Add to pending trips
-                          setPendingTrips(new Set([...pendingTrips, trip.id]));
-                        } else {
-                          alert(result.message || 'Failed to send join request');
+                  {/* Join Now / Joined + Chat Now - Right Side */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <button 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (joinedTrips.has(trip.id)) {
+                          router.push(`/community/${trip.id}`);
+                          return;
                         }
-                      } catch (error) {
-                        console.error('Error joining trip:', error);
-                        alert('Failed to send join request. Please try again.');
-                      }
-                    }}
-                    style={{
-                      backgroundColor: joinedTrips.has(trip.id) ? '#10b981' : pendingTrips.has(trip.id) ? '#f59e0b' : '#1D4ED8',
-                      color: 'white',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '50px',
-                      border: 'none',
-                      fontSize: '0.9375rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0
-                    }}
-                    onMouseEnter={(e) => {
-                      if (joinedTrips.has(trip.id)) {
-                        e.currentTarget.style.backgroundColor = '#059669';
-                      } else if (pendingTrips.has(trip.id)) {
-                        e.currentTarget.style.backgroundColor = '#d97706';
-                      } else {
-                        e.currentTarget.style.backgroundColor = '#1e40af';
-                      }
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (joinedTrips.has(trip.id)) {
-                        e.currentTarget.style.backgroundColor = '#10b981';
-                      } else if (pendingTrips.has(trip.id)) {
-                        e.currentTarget.style.backgroundColor = '#f59e0b';
-                      } else {
-                        e.currentTarget.style.backgroundColor = '#1D4ED8';
-                      }
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
-                  >
-                    {joinedTrips.has(trip.id) ? 'Joined' : pendingTrips.has(trip.id) ? 'Pending' : 'Join Now'}
-                  </button>
+                        
+                        if (pendingTrips.has(trip.id)) {
+                          return;
+                        }
+                        
+                        try {
+                          const token = localStorage.getItem('token');
+                          const response = await fetch(`${API_BASE_URL}/api/user/community-trip/${trip.id}/join`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${token}`,
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          
+                          const result = await response.json();
+                          
+                          if (result.status) {
+                            setToast({ show: true, message: 'Your request will be sent' });
+                            setTimeout(() => setToast({ show: false, message: '' }), 3000);
+                            setPendingTrips(new Set([...pendingTrips, trip.id]));
+                          } else {
+                            const msg = result.message || 'Failed to send join request';
+                            if (msg.toLowerCase().includes('already a member') || msg.toLowerCase().includes('already requested')) {
+                              setPendingTrips(prev => new Set([...prev, trip.id]));
+                              fetchTrips();
+                            }
+                            setToast({ show: true, message: msg });
+                            setTimeout(() => setToast({ show: false, message: '' }), 4000);
+                          }
+                        } catch (error) {
+                          console.error('Error joining trip:', error);
+                          setToast({ show: true, message: 'Failed to send join request. Please try again.' });
+                          setTimeout(() => setToast({ show: false, message: '' }), 4000);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: joinedTrips.has(trip.id) ? '#10b981' : pendingTrips.has(trip.id) ? '#f59e0b' : '#1D4ED8',
+                        color: 'white',
+                        padding: '0.75rem 1.25rem',
+                        borderRadius: '50px',
+                        border: 'none',
+                        fontSize: '0.9375rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (joinedTrips.has(trip.id)) {
+                          e.currentTarget.style.backgroundColor = '#059669';
+                        } else if (pendingTrips.has(trip.id)) {
+                          e.currentTarget.style.backgroundColor = '#d97706';
+                        } else {
+                          e.currentTarget.style.backgroundColor = '#1e40af';
+                        }
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (joinedTrips.has(trip.id)) {
+                          e.currentTarget.style.backgroundColor = '#10b981';
+                        } else if (pendingTrips.has(trip.id)) {
+                          e.currentTarget.style.backgroundColor = '#f59e0b';
+                        } else {
+                          e.currentTarget.style.backgroundColor = '#1D4ED8';
+                        }
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                    >
+                      {joinedTrips.has(trip.id) ? 'Joined' : pendingTrips.has(trip.id) ? 'Pending' : 'Join Now'}
+                    </button>
+                    {joinedTrips.has(trip.id) && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/community/${trip.id}`);
+                        }}
+                        style={{
+                          backgroundColor: '#1D4ED8',
+                          color: 'white',
+                          padding: '0.75rem 1.25rem',
+                          borderRadius: '50px',
+                          border: 'none',
+                          fontSize: '0.9375rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#1e40af';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = '#1D4ED8';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        Chat Now
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </Grid>

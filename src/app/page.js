@@ -24,6 +24,11 @@ export default function Home() {
   const [bannerLoading, setBannerLoading] = useState(true);
   const [adventurePosts, setAdventurePosts] = useState([]);
   const [adventureLoading, setAdventureLoading] = useState(true);
+  const [packageRomantic, setPackageRomantic] = useState([]);
+  const [packageFamily, setPackageFamily] = useState([]);
+  const [packageAdventure, setPackageAdventure] = useState([]);
+  const [packageBestTour, setPackageBestTour] = useState([]);
+  const [packageSectionLoading, setPackageSectionLoading] = useState(true);
 
   useEffect(() => {
     AOS.init({
@@ -35,6 +40,7 @@ export default function Home() {
     });
     fetchBanners();
     fetchAdventurePosts();
+    fetchPackageSections();
   }, []);
 
   const fetchBanners = async () => {
@@ -68,6 +74,91 @@ export default function Home() {
       setAdventureLoading(false);
     }
   };
+
+  const fetchPackageSections = async () => {
+    try {
+      setPackageSectionLoading(true);
+      const base = `${API_BASE_URL}/api/user/getPackages?page=1&limit=12`;
+      const [romRes, familyRes, adventureRes, bestRes] = await Promise.all([
+        fetch(`${base}&category=romantic`),
+        fetch(`${base}&category=family`),
+        fetch(`${base}&category=adventure`),
+        fetch(`${API_BASE_URL}/api/user/getPackages?page=1&limit=12&isPopular=true`),
+      ]);
+      const rom = await romRes.json();
+      const family = await familyRes.json();
+      const adventure = await adventureRes.json();
+      const best = await bestRes.json();
+      if (rom.status && rom.data) setPackageRomantic(rom.data);
+      if (family.status && family.data) setPackageFamily(family.data);
+      if (adventure.status && adventure.data) setPackageAdventure(adventure.data);
+      if (best.status && best.data) setPackageBestTour(best.data);
+    } catch (error) {
+      console.error("Error fetching package sections:", error);
+    } finally {
+      setPackageSectionLoading(false);
+    }
+  };
+
+  const getPackageLocations = (pkg, maxShow = 3) => {
+    const list = [];
+    if (pkg.destinations && Array.isArray(pkg.destinations)) {
+      pkg.destinations.forEach((d) => {
+        const name = d.destinationName || d.name || d;
+        if (name && typeof name === 'string') list.push(name);
+      });
+    }
+    if (list.length === 0 && pkg.destination) {
+      const parts = String(pkg.destination).split(/[,&]/).map((s) => s.trim()).filter(Boolean);
+      list.push(...parts);
+    }
+    const show = list.slice(0, maxShow);
+    const more = list.length - maxShow;
+    return { show, more };
+  };
+
+  const renderPackageCard = (pkg) => {
+    const img = pkg?.images?.[0] || '/placeholder-package.jpg';
+    const price = pkg?.price?.adult;
+    const tagLabel = price ? `₹${Number(price).toLocaleString('en-IN')}/- onwards` : 'Customised';
+    const { show: locationShow, more: locationMore } = getPackageLocations(pkg);
+    const NO_IMG = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/No-Image-Placeholder-landscape.svg/1024px-No-Image-Placeholder-landscape.svg.png?20240614172314';
+    return (
+      <button
+        type="button"
+        className="wanderon-package-card"
+        onClick={() => router.push(`/packages/${pkg._id}`)}
+        aria-label={`View package: ${pkg?.title || 'Package'}`}
+      >
+        <div className="wanderon-package-card-image-wrap">
+          <img src={img || NO_IMG} alt={pkg?.title || 'Package'} onError={(e) => { e.target.src = NO_IMG; }} />
+          <div className="wanderon-package-card-overlay" />
+          <span className="wanderon-package-card-tag">{tagLabel}</span>
+        </div>
+        <div className="wanderon-package-card-content">
+          <h3 className="wanderon-package-card-title">{pkg?.title || 'Package'}</h3>
+          {locationShow.length > 0 && (
+            <p className="wanderon-package-card-locations">
+              {locationShow.map((loc, i) => (
+                <span key={i}>
+                  {loc}
+                  {i < locationShow.length - 1 || locationMore > 0 ? <span className="dot"> · </span> : null}
+                </span>
+              ))}
+              {locationMore > 0 && <span className="more-link">+{locationMore} More</span>}
+            </p>
+          )}
+        </div>
+      </button>
+    );
+  };
+
+  const packageCarousels = [
+    { key: 'romantic', title: 'Romantic Trip Packages', list: packageRomantic, prevClass: 'swiper-button-prev-pkg-romantic', nextClass: 'swiper-button-next-pkg-romantic' },
+    { key: 'best', title: 'Best Tour Packages', list: packageBestTour, prevClass: 'swiper-button-prev-pkg-best', nextClass: 'swiper-button-next-pkg-best' },
+    { key: 'family', title: 'Packages for Family', list: packageFamily, prevClass: 'swiper-button-prev-pkg-family', nextClass: 'swiper-button-next-pkg-family' },
+    { key: 'adventure', title: 'Adventure Trip Packages', list: packageAdventure, prevClass: 'swiper-button-prev-pkg-adventure', nextClass: 'swiper-button-next-pkg-adventure' },
+  ];
 
   return (
     <div className="flex items-center justify-center bg-zinc-50 font-sans dark:bg-white" style={{ width: '100%', maxWidth: '100%' }}>
@@ -150,21 +241,15 @@ export default function Home() {
           <div className="unforgettable-journey-hero">
             <div className="unforgettable-journey-background-new">
               <div className="unforgettable-journey-background-overlay"></div>
-              <div className="unforgettable-journey-circle-1"></div>
-              <div className="unforgettable-journey-circle-2"></div>
-              <div className="unforgettable-journey-circle-3"></div>
-              <div className="unforgettable-journey-circle-4"></div>
-              <div className="unforgettable-journey-circle-5"></div>
-              <div className="unforgettable-journey-circle-6"></div>
-              <div className="unforgettable-journey-circle-7"></div>
-              <div className="unforgettable-journey-circle-8"></div>
-              <div className="unforgettable-journey-circle-9"></div>
-              <div className="unforgettable-journey-circle-10"></div>
+              <div className="uj-decor">
+                <div className="uj-decor-orb uj-decor-orb-1"></div>
+                <div className="uj-decor-orb uj-decor-orb-2"></div>
+              </div>
             </div>
             
 
             <div className="unforgettable-journey-content ">
-              <h1 className="unforgettable-journey-heading animation-glow" data-aos="fade-down" data-aos-delay="200">
+              <h1 className="unforgettable-journey-heading " data-aos="fade-down" data-aos-delay="200">
                 <span>UNFORGETTABLE</span>
                 <span>JOURNEY AWAITS</span>
               </h1>
@@ -188,12 +273,7 @@ export default function Home() {
                     <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
-           
-
-           
-              </div>
-
-           
+                </div>
 
 
               <div className="hidden-gems-section">
@@ -244,7 +324,7 @@ export default function Home() {
                   <div className="hidden-gems-card hidden-gems-card-1" data-aos="fade-up" data-aos-delay="200">
                     <h3 className="hidden-gems-card-title">Travel Solo, Not Alone</h3>
                     <p className="hidden-gems-card-description">
-                      Connect with like-minded travelers and turn solo trips into shared adventures filled with friendship.
+                      Solo trips, shared adventures—find your people.
                     </p>
                   </div>
                 </SwiperSlide>
@@ -253,7 +333,7 @@ export default function Home() {
                   <div className="hidden-gems-card hidden-gems-card-2" data-aos="fade-up" data-aos-delay="300">
                     <h3 className="hidden-gems-card-title">Find Your Travel Tribe</h3>
                     <p className="hidden-gems-card-description">
-                      Discover perfect travel companions who match your style, whether you seek adventure, culture, or nature.
+                      Match with companions who share your vibe.
                     </p>
                   </div>
                 </SwiperSlide>
@@ -262,7 +342,7 @@ export default function Home() {
                   <div className="hidden-gems-card hidden-gems-card-3" data-aos="fade-up" data-aos-delay="400">
                     <h3 className="hidden-gems-card-title">Safety in Numbers</h3>
                     <p className="hidden-gems-card-description">
-                      Travel confidently with our verified community and experienced captains ensuring safe, authentic experiences.
+                      Verified community and captains for safe, authentic trips.
                     </p>
                   </div>
                 </SwiperSlide>
@@ -271,7 +351,7 @@ export default function Home() {
                   <div className="hidden-gems-card hidden-gems-card-4" data-aos="fade-up" data-aos-delay="500">
                     <h3 className="hidden-gems-card-title">Split Costs, Share Memories</h3>
                     <p className="hidden-gems-card-description">
-                      Share expenses with your TrippyMates and create priceless memories together. More fun, less expense.
+                      Split costs, share memories—more fun, less expense.
                     </p>
                   </div>
                 </SwiperSlide>
@@ -280,7 +360,7 @@ export default function Home() {
                   <div className="hidden-gems-card hidden-gems-card-5" data-aos="fade-up" data-aos-delay="600">
                     <h3 className="hidden-gems-card-title">From Strangers to Friends</h3>
                     <p className="hidden-gems-card-description">
-                      Every journey starts with strangers but ends with friends. Form lasting friendships through travel.
+                      Strangers at the start, friends by the end.
                     </p>
                   </div>
                 </SwiperSlide>
@@ -413,6 +493,16 @@ export default function Home() {
 
           {/* Main Content Area */}
           <div className="connect-kind-background">
+            <div className="connect-kind-circles">
+              <div className="connect-kind-circle connect-kind-circle-1"></div>
+              <div className="connect-kind-circle connect-kind-circle-2"></div>
+              <div className="connect-kind-circle connect-kind-circle-3"></div>
+              <div className="connect-kind-circle connect-kind-circle-4"></div>
+              <div className="connect-kind-circle connect-kind-circle-5"></div>
+              <div className="connect-kind-circle connect-kind-circle-6"></div>
+              <div className="connect-kind-circle connect-kind-circle-7"></div>
+              <div className="connect-kind-circle connect-kind-circle-8"></div>
+            </div>
             <div className="connect-kind-border-top">
               <img
                 src="/connect/connect-design-2.png"
@@ -770,6 +860,119 @@ export default function Home() {
           </div>
          
       </section>
+
+        {/* Package Section – Romantic, Best Tour, Family, Adventure (Wanderon-style) */}
+        <section className="package-section">
+          <div className="package-section-container">
+            <div className="package-section-header" data-aos="fade-up">
+              <h2 className="package-section-title">
+                <span className="title-main">Popular </span>
+                <span className="title-accent">Packages</span>
+              </h2>
+              <p className="package-section-subtitle">
+                Discover India&apos;s most loved travel packages — romantic getaways, family trips, and adventure tours.
+              </p>
+              <div className="package-section-separator" />
+            </div>
+            {packageSectionLoading ? (
+              <div className="package-section-empty">Loading packages...</div>
+            ) : (
+              <>
+                {packageCarousels.map((carousel) => (
+                  carousel.list.length > 0 && (
+                    <div key={carousel.key} className="package-carousel-block" data-aos="fade-up">
+                      <h3 className="package-carousel-title">{carousel.title}</h3>
+                      <div className="package-carousel-wrapper">
+                        <button
+                          type="button"
+                          className={`package-carousel-nav package-carousel-nav-left ${carousel.prevClass}`}
+                          aria-label="Previous"
+                        >
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                        <Swiper
+                          modules={[Navigation, Autoplay]}
+                          spaceBetween={24}
+                          slidesPerView={1}
+                          loop={carousel.list.length > 3}
+                          autoplay={{
+                            delay: 3500,
+                            disableOnInteraction: false,
+                            pauseOnMouseEnter: true,
+                          }}
+                          navigation={{
+                            prevEl: `.${carousel.prevClass}`,
+                            nextEl: `.${carousel.nextClass}`,
+                          }}
+                          breakpoints={{
+                            640: { slidesPerView: 2, spaceBetween: 20 },
+                            1024: { slidesPerView: 3, spaceBetween: 24 },
+                            1280: { slidesPerView: 4, spaceBetween: 24 },
+                          }}
+                          className="package-carousel-swiper"
+                        >
+                          {carousel.list.map((pkg) => (
+                            <SwiperSlide key={pkg._id}>
+                              {renderPackageCard(pkg)}
+                            </SwiperSlide>
+                          ))}
+                        </Swiper>
+                        <button
+                          type="button"
+                          className={`package-carousel-nav package-carousel-nav-right ${carousel.nextClass}`}
+                          aria-label="Next"
+                        >
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  )
+                ))}
+                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                  <button
+                    type="button"
+                    className="home-btn"
+                    onClick={() => router.push('/explore-destination')}
+                    style={{
+                      padding: '0.875rem 2rem',
+                      borderRadius: '12px',
+                      fontWeight: '600',
+                      background: 'linear-gradient(135deg, #3460DC 0%, #2563EB 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                    }}
+                  >
+                    Explore by Destination
+                  </button>
+                  <span style={{ margin: '0 1rem', color: '#94a3b8' }}>|</span>
+                  <button
+                    type="button"
+                    className="home-btn"
+                    onClick={() => router.push('/packages')}
+                    style={{
+                      padding: '0.875rem 2rem',
+                      borderRadius: '12px',
+                      fontWeight: '600',
+                      background: 'transparent',
+                      color: '#3460DC',
+                      border: '2px solid #3460DC',
+                      cursor: 'pointer',
+                      fontSize: '1rem',
+                    }}
+                  >
+                    View All Packages
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
 
         {/* Trippy Darshan Section */}
         <section className="trippy-darshan-section">
